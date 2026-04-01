@@ -1,0 +1,30 @@
+# Copyright (c) 2026 Olo Labs
+# SPDX-License-Identifier: Apache-2.0
+
+# Demo: frontend for trying the chat UI. Backend can run on host (localhost:7080)
+# or override VITE_API_BASE to point at a remote demo API.
+# Usage: docker compose -f docker-compose.demo.yml up --build
+# Optional: add a backend service below for an all-in-one demo (see docs/DOCKER.md).
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE: ${VITE_API_BASE:-http://localhost:7080}
+        VITE_WS_ACCESS_TOKEN: ${VITE_WS_ACCESS_TOKEN:-}
+        VITE_WS_PING_INTERVAL_SEC: ${VITE_WS_PING_INTERVAL_SEC:-10}
+    ports:
+      - "3000:80"
+    # Optional: run with restart for a long-lived demo
+    # restart: unless-stopped
+
+  # Uncomment and set image to run the olo backend in the same stack (full demo).
+  # The frontend is built with VITE_API_BASE=http://localhost:7080; the browser
+  # will call the backend on the host at port 7080.
+  # backend:
+  #   image: your-org/olo-backend:latest   # replace with your olo backend image
+  #   ports:
+  #     - "7080:7080"
+  #   # add env, healthcheck, etc. per your backend image

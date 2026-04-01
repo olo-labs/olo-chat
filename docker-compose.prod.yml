@@ -1,0 +1,19 @@
+# Copyright (c) 2026 Olo Labs
+# SPDX-License-Identifier: Apache-2.0
+
+# Production: frontend with build args from env. Set VITE_API_BASE (and optionally
+# VITE_WS_ACCESS_TOKEN, VITE_WS_PING_INTERVAL_SEC) in .env or export before running.
+# Usage: docker compose -f docker-compose.prod.yml up --build -d
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE: ${VITE_API_BASE:?Set VITE_API_BASE in .env or environment}
+        VITE_WS_ACCESS_TOKEN: ${VITE_WS_ACCESS_TOKEN:-}
+        VITE_WS_PING_INTERVAL_SEC: ${VITE_WS_PING_INTERVAL_SEC:-10}
+    ports:
+      - "80:80"
+    restart: unless-stopped

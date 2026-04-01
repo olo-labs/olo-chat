@@ -1,0 +1,382 @@
+/**
+ * Copyright (c) 2026 Olo Labs
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* Documents → RAG upload: token prompt and document upload */
+.rag-upload-view {
+  padding: 1.25rem 1.5rem;
+  max-width: 36rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.rag-upload-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.rag-upload-heading {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fafafa;
+}
+
+.rag-upload-description {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #a1a1aa;
+  line-height: 1.45;
+}
+
+.rag-upload-token-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.rag-upload-choice-btn {
+  padding: 0.6rem 1rem;
+  font-size: 0.875rem;
+  color: #e4e4e7;
+  background: #27272a;
+  border: 1px solid #3f3f46;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.rag-upload-choice-btn:hover:not(:disabled) {
+  background: #3f3f46;
+  border-color: #52525b;
+}
+
+.rag-upload-choice-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.rag-upload-token-set {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.rag-upload-token-input-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.rag-upload-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #a1a1aa;
+}
+
+.rag-upload-input {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: #fafafa;
+  background: #18181b;
+  border: 1px solid #3f3f46;
+  border-radius: 6px;
+  outline: none;
+}
+
+.rag-upload-input:focus {
+  border-color: #3b82f6;
+}
+
+.rag-upload-input::placeholder {
+  color: #71717a;
+}
+
+.rag-upload-select {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: #fafafa;
+  background: #18181b;
+  border: 1px solid #3f3f46;
+  border-radius: 6px;
+  outline: none;
+  cursor: pointer;
+}
+
+.rag-upload-select:focus {
+  border-color: #3b82f6;
+}
+
+.rag-upload-created {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.75rem 1rem;
+  background: #18181b;
+  border: 1px solid #27272a;
+  border-radius: 8px;
+}
+
+.rag-upload-token-value {
+  font-size: 0.85rem;
+  font-family: ui-monospace, monospace;
+  color: #a5f3fc;
+  word-break: break-all;
+}
+
+.rag-upload-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+  color: #71717a;
+}
+
+.rag-upload-secondary {
+  align-self: flex-start;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8rem;
+  color: #71717a;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.rag-upload-secondary:hover {
+  color: #a1a1aa;
+}
+
+/* Drop zone */
+.rag-upload-dropzone {
+  position: relative;
+  min-height: 7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: #18181b;
+  border: 2px dashed #3f3f46;
+  border-radius: 10px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.rag-upload-dropzone.drag-over {
+  border-color: #3b82f6;
+  background: #1e3a5f22;
+}
+
+.rag-upload-dropzone.has-file {
+  border-style: solid;
+  border-color: #27272a;
+}
+
+.rag-upload-file-input-hidden {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  pointer-events: none;
+}
+
+.rag-upload-dropzone-label-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  pointer-events: none;
+}
+
+.rag-upload-dropzone-label-wrap .rag-upload-dropzone-buttons {
+  pointer-events: auto;
+}
+
+.rag-upload-dropzone-label {
+  font-size: 0.9rem;
+  color: #a1a1aa;
+}
+
+.rag-upload-dropzone-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.rag-upload-browse-btn {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+  color: #3b82f6;
+  background: #1e3a5f44;
+  border: 1px solid #3b82f6;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.rag-upload-browse-btn:hover {
+  background: #1e3a5f66;
+}
+
+.rag-upload-browse {
+  color: #3b82f6;
+  text-decoration: underline;
+}
+
+.rag-upload-file-list {
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: auto;
+}
+
+.rag-upload-file-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #a1a1aa;
+}
+
+.rag-upload-clear-files {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  color: #71717a;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.rag-upload-clear-files:hover {
+  color: #f87171;
+}
+
+.rag-upload-file-ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 12rem;
+  overflow: auto;
+}
+
+.rag-upload-file-li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  background: #27272a;
+  border-radius: 4px;
+  margin-bottom: 0.25rem;
+}
+
+.rag-upload-file-li .rag-upload-file-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.rag-upload-file-li .rag-upload-file-size {
+  flex-shrink: 0;
+}
+
+.rag-upload-file-more {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: #71717a;
+}
+
+.rag-upload-env-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
+  color: #71717a;
+}
+
+.rag-upload-file-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: #27272a;
+  border-radius: 6px;
+  width: 100%;
+  max-width: 100%;
+}
+
+.rag-upload-file-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.875rem;
+  color: #e4e4e7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rag-upload-file-size {
+  font-size: 0.75rem;
+  color: #71717a;
+  flex-shrink: 0;
+}
+
+.rag-upload-remove-file {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: #71717a;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.rag-upload-remove-file:hover {
+  color: #f87171;
+  background: #450a0a;
+}
+
+.rag-upload-actions {
+  margin-top: 0.25rem;
+}
+
+.rag-upload-primary {
+  padding: 0.5rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #fff;
+  background: #3b82f6;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.rag-upload-primary:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.rag-upload-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rag-upload-result {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.85rem;
+  border-radius: 6px;
+}
+
+.rag-upload-result.success {
+  color: #86efac;
+  background: #14532d33;
+  border: 1px solid #166534;
+}
+
+.rag-upload-result.error {
+  color: #fca5a5;
+  background: #450a0a33;
+  border: 1px solid #7f1d1d;
+}
