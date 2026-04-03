@@ -53,7 +53,7 @@ The chat UI is designed to work with the **olo** backend:
 - **[DESIGN.md](../olo/docs/DESIGN.md)** — Domain objects, execution model, API contracts, persistence.
 - **[API_PAYLOADS.md](../olo/docs/API_PAYLOADS.md)** — Example request/response payloads for sessions, messages, runs, SSE, human-input.
 - **[WEBSOCKET.md](../olo/docs/WEBSOCKET.md)** — WebSocket endpoint for run events (alternative to SSE).
-- **[DEMO.md](../olo/docs/DEMO.md)** — How to build and run the backend, Temporal, and executor.
+- **[DEMO.md](../olo/docs/DEMO.md)** — How to build and run the backend, Temporal, and Temporal worker (olo-executor or olo-worker).
 
 ---
 
@@ -63,7 +63,7 @@ The chat UI is designed to work with the **olo** backend:
    ```bash
    ./gradlew bootRun
    ```
-   See [olo/docs/DEMO.md](../olo/docs/DEMO.md) for full setup (Temporal, executor).
+   See [olo/docs/DEMO.md](../olo/docs/DEMO.md) for full setup (Temporal, worker).
 
 2. **Start olo-chat** (from this directory):
    ```bash

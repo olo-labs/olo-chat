@@ -108,38 +108,31 @@ export const DEFAULT_PATH = '/chat/conversation'
 export type PanelQuery = { menu?: 0 | 1; tools?: 0 | 1; props?: 0 | 1 }
 
 export interface ParsedQuery {
-  tenantId: string
   menuExpanded: boolean
   toolsExpanded: boolean
   propsExpanded: boolean
 }
 
 /**
- * Parse search string to panel + tenant state.
+ * Parse search string to panel state.
  * Defaults: menu expanded (true), tools and props collapsed (false).
  */
 export function parseQuery(search: string): ParsedQuery {
   const params = new URLSearchParams(search)
   return {
-    tenantId: params.get('tenant') ?? '',
     menuExpanded: params.get('menu') !== '0',
     toolsExpanded: params.get('tools') === '1',
     propsExpanded: params.get('props') === '1',
   }
 }
 
-/**
- * Build query string for panel state and tenant.
- * Always outputs menu, tools, props (readable). Tenant only when set.
- */
+/** Build query string for panel state (menu, tools, props). */
 export function buildQuery(params: {
-  tenantId?: string
   menu: 0 | 1
   tools: 0 | 1
   props: 0 | 1
 }): string {
   const p = new URLSearchParams()
-  if (params.tenantId) p.set('tenant', params.tenantId)
   p.set('menu', String(params.menu))
   p.set('tools', String(params.tools))
   p.set('props', String(params.props))
@@ -147,33 +140,19 @@ export function buildQuery(params: {
 }
 
 /** Current panel state from ParsedQuery for buildQuery. */
-export function parsedToPanelParams(q: ParsedQuery): { tenantId: string; menu: 0 | 1; tools: 0 | 1; props: 0 | 1 } {
+export function parsedToPanelParams(q: ParsedQuery): { menu: 0 | 1; tools: 0 | 1; props: 0 | 1 } {
   return {
-    tenantId: q.tenantId,
     menu: q.menuExpanded ? 1 : 0,
     tools: q.toolsExpanded ? 1 : 0,
     props: q.propsExpanded ? 1 : 0,
   }
 }
 
-/**
- * Build pathname + query for navigation. Preserves tenant and panel state in URL.
- */
+/** Build pathname + query for navigation. Preserves panel state in URL. */
 export function buildPathWithQuery(
   pathname: string,
-  params: { tenantId?: string; menu: 0 | 1; tools: 0 | 1; props: 0 | 1 }
+  params: { menu: 0 | 1; tools: 0 | 1; props: 0 | 1 }
 ): string {
   const q = buildQuery(params)
   return pathname + (q ? '?' + q : '')
-}
-
-/**
- * Build pathname + tenant query only (legacy). Prefer buildPathWithQuery with full panel state.
- */
-export function buildPathWithTenant(
-  pathname: string,
-  tenantId: string
-): string {
-  const search = tenantId ? `?tenant=${encodeURIComponent(tenantId)}` : ''
-  return pathname + search
 }

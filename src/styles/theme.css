@@ -36,7 +36,6 @@
   background: #ffffff;
   border-color: #e4e4e7;
 }
-[data-theme="light"] .left-panel-tenant-label,
 [data-theme="light"] .left-panel-category-label,
 [data-theme="light"] .side-panel-title,
 [data-theme="light"] .side-panel-collapsed-label,
@@ -60,7 +59,6 @@
 [data-theme="light"] .left-panel-item.active,
 [data-theme="light"] .left-panel-category-header.active,
 [data-theme="light"] .left-panel-sub-item.active { background: #e4e4e7; color: #18181b; }
-[data-theme="light"] .left-panel-tenant-select,
 [data-theme="light"] .tenant-config-input {
   background: #f4f4f5;
   border-color: #d4d4d8;
@@ -112,6 +110,7 @@
 [data-theme="light"] .left-panel-bell-tooltip::after { border-top-color: #27272a; }
 [data-theme="light"] .left-panel-user-label { color: #18181b; }
 [data-theme="light"] .left-panel-version { color: #52525b; }
+[data-theme="light"] .left-panel-chat-version { color: #71717a; }
 [data-theme="light"] .left-panel-copyright { color: #71717a; }
 [data-theme="light"] .left-panel-user-bubble { box-shadow: 0 0 0 2px #f4f4f5; }
 

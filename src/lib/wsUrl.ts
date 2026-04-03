@@ -29,3 +29,10 @@ export function getWsAccessToken(): string | null {
     return null
   }
 }
+
+/** Authorization header for REST calls so the backend can resolve tenantId from the JWT (same token as WebSocket). */
+export function getApiAuthHeaders(): Record<string, string> {
+  const token = getWsAccessToken()
+  if (!token) return {}
+  return { Authorization: `Bearer ${token}` }
+}

@@ -8,9 +8,20 @@
  * Uses VITE_API_BASE (e.g. http://localhost:7080) so requests go to BE port 7080; if unset, uses /api (Vite proxy to 7080).
  */
 
+import { getApiAuthHeaders } from '../lib/wsUrl'
+
 const API = import.meta.env.VITE_API_BASE
   ? `${import.meta.env.VITE_API_BASE.replace(/\/$/, '')}/api`
   : '/api'
+
+function withAuth(headers: Record<string, string> = {}): Record<string, string> {
+  return { ...getApiAuthHeaders(), ...headers }
+}
+
+/** Trims tenant id for URL paths and bodies (same value as {@code olo.default-tenant-id} from UI context). */
+export function tenantIdForApiPath(tenantId: string): string {
+  return tenantId?.trim() ?? ''
+}
 
 export interface CreateSessionResponse {
   sessionId: string
@@ -54,16 +65,35 @@ export interface RunEventDto {
   metadata?: Record<string, unknown>
 }
 
-/** Tenant list from GET /api/tenants (olo backend). Populates the Chat UI top tenant dropdown. */
+/** Tenant list from GET /api/tenants (olo backend). Used by configuration and related flows. */
 export interface TenantDto {
   id: string
   name: string
 }
 
-/** Fetches tenant list for the top dropdown. Uses GET /api/tenants (proxied to http://localhost:7080/api/tenants). */
+/** Tenant id, footer labels, and Olo version from GET /api/ui/context. Send Bearer token so tenantId comes from JWT {@code tenantId} claim. */
+export interface UiContextDto {
+  tenantId: string
+  tenant: string
+  user: string
+  /** Backend release label (olo.version / OLO_VERSION), e.g. v1.0.0-Dev */
+  oloVersion: string
+}
+
+export async function getUiContext(): Promise<UiContextDto | null> {
+  try {
+    const res = await fetch(`${API}/ui/context`, { headers: withAuth() })
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
+  }
+}
+
+/** Fetches tenant list. Uses GET /api/tenants (proxied to http://localhost:7080/api/tenants). */
 export async function getTenants(): Promise<TenantDto[]> {
   try {
-    const res = await fetch(`${API}/tenants`)
+    const res = await fetch(`${API}/tenants`, { headers: withAuth() })
     if (!res.ok) return []
     const data = await res.json()
     return Array.isArray(data) ? data : []
@@ -74,9 +104,10 @@ export async function getTenants(): Promise<TenantDto[]> {
 
 /** Workflow queue names from Redis keys <tenantId>:olo:kernel:config:* (left bar under Chat/RAG). */
 export async function getQueues(tenantId: string): Promise<string[]> {
-  if (!tenantId) return []
+  const tid = tenantIdForApiPath(tenantId)
+  if (!tid) return []
   try {
-    const res = await fetch(`${API}/tenants/${encodeURIComponent(tenantId)}/queues`)
+    const res = await fetch(`${API}/tenants/${encodeURIComponent(tid)}/queues`, { headers: withAuth() })
     if (!res.ok) return []
     const data = await res.json()
     return Array.isArray(data) ? data : []
@@ -87,7 +118,7 @@ export async function getQueues(tenantId: string): Promise<string[]> {
 
 /**
  * Config for a workflow queue from Redis key <tenantId>:olo:kernel:config:<queueName>.
- * Pipelines are the classification within the queue (handled by workflow execution); used for the Pipeline dropdown in Conversation.
+ * `pipelines` from the API is normalized to `{ id, name }[]` for the Conversation dropdown (ids are used as pipelineId).
  */
 export interface QueueConfigDto {
   pipelines?: Array<string | { id: string; name?: string }>
@@ -95,10 +126,12 @@ export interface QueueConfigDto {
 }
 
 export async function getQueueConfig(tenantId: string, queueName: string): Promise<QueueConfigDto> {
-  if (!tenantId || !queueName) return {}
+  const tid = tenantIdForApiPath(tenantId)
+  if (!tid || !queueName) return {}
   try {
     const res = await fetch(
-      `${API}/tenants/${encodeURIComponent(tenantId)}/queues/${encodeURIComponent(queueName)}/config`
+      `${API}/tenants/${encodeURIComponent(tid)}/queues/${encodeURIComponent(queueName)}/config`,
+      { headers: withAuth() }
     )
     if (!res.ok) return {}
     const data = await res.json()
@@ -123,14 +156,15 @@ export async function listSessions(
   tenantId: string,
   options?: { queue?: string; pipeline?: string }
 ): Promise<SessionSummaryDto[]> {
-  if (!tenantId) return []
+  const tid = tenantIdForApiPath(tenantId)
+  if (!tid) return []
   try {
     const params = new URLSearchParams()
     if (options?.queue) params.set('queue', options.queue)
     if (options?.pipeline) params.set('pipeline', options.pipeline)
     const qs = params.toString()
-    const url = `${API}/tenants/${encodeURIComponent(tenantId)}/sessions` + (qs ? `?${qs}` : '')
-    const res = await fetch(url)
+    const url = `${API}/tenants/${encodeURIComponent(tid)}/sessions` + (qs ? `?${qs}` : '')
+    const res = await fetch(url, { headers: withAuth() })
     if (!res.ok) return []
     const data = await res.json()
     return Array.isArray(data) ? data : []
@@ -144,20 +178,24 @@ export async function deleteAllSessions(
   tenantId: string,
   options?: { queue?: string; pipeline?: string }
 ): Promise<void> {
-  if (!tenantId) return
+  const tid = tenantIdForApiPath(tenantId)
+  if (!tid) return
   const params = new URLSearchParams()
   if (options?.queue) params.set('queue', options.queue)
   if (options?.pipeline) params.set('pipeline', options.pipeline)
   const qs = params.toString()
-  const url = `${API}/tenants/${encodeURIComponent(tenantId)}/sessions` + (qs ? `?${qs}` : '')
-  const res = await fetch(url, { method: 'DELETE' })
+  const url = `${API}/tenants/${encodeURIComponent(tid)}/sessions` + (qs ? `?${qs}` : '')
+  const res = await fetch(url, { method: 'DELETE', headers: withAuth() })
   if (!res.ok) throw new Error(`Delete all sessions failed: ${res.status}`)
 }
 
 /** Delete one chat session and its messages. Used by Conversation per-conversation delete button. */
 export async function deleteSession(sessionId: string): Promise<void> {
   if (!sessionId) return
-  const res = await fetch(`${API}/sessions/${encodeURIComponent(sessionId)}`, { method: 'DELETE' })
+  const res = await fetch(`${API}/sessions/${encodeURIComponent(sessionId)}`, {
+    method: 'DELETE',
+    headers: withAuth(),
+  })
   if (!res.ok) throw new Error(`Delete session failed: ${res.status}`)
 }
 
@@ -176,7 +214,7 @@ export async function createSession(
   options?: { taskQueue?: string; queueName?: string; pipelineId?: string; overrides?: Record<string, unknown> }
 ): Promise<CreateSessionResponse> {
   const body: CreateSessionBody = {
-    tenantId,
+    tenantId: tenantIdForApiPath(tenantId),
     taskQueue: options?.taskQueue,
     queueName: options?.queueName ?? options?.taskQueue,
     pipelineId: options?.pipelineId,
@@ -184,7 +222,7 @@ export async function createSession(
   }
   const res = await fetch(`${API}/sessions`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: withAuth({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(body),
   })
   if (!res.ok) throw new Error(`Create session failed: ${res.status}`)
@@ -198,7 +236,7 @@ export async function sendMessage(
 ): Promise<SendMessageResponse> {
   const res = await fetch(`${API}/sessions/${encodeURIComponent(sessionId)}/messages`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: withAuth({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ content, taskQueue: options?.taskQueue }),
   })
   if (!res.ok) throw new Error(`Send message failed: ${res.status}`)
@@ -206,7 +244,9 @@ export async function sendMessage(
 }
 
 export async function listMessages(sessionId: string): Promise<ChatMessageDto[]> {
-  const res = await fetch(`${API}/sessions/${encodeURIComponent(sessionId)}/messages`)
+  const res = await fetch(`${API}/sessions/${encodeURIComponent(sessionId)}/messages`, {
+    headers: withAuth(),
+  })
   if (!res.ok) throw new Error(`List messages failed: ${res.status}`)
   return res.json()
 }
@@ -219,7 +259,7 @@ export interface RunStatusDto {
 
 export async function getRun(runId: string): Promise<RunStatusDto | null> {
   try {
-    const res = await fetch(`${API}/runs/${encodeURIComponent(runId)}`)
+    const res = await fetch(`${API}/runs/${encodeURIComponent(runId)}`, { headers: withAuth() })
     if (!res.ok) return null
     const data = await res.json()
     return { runId: data.runId ?? runId, status: data.status ?? 'running' }
@@ -236,13 +276,30 @@ export interface RunResponseDto {
 
 export async function getRunResponse(runId: string): Promise<RunResponseDto | null> {
   try {
-    const res = await fetch(`${API}/runs/${encodeURIComponent(runId)}/response`)
+    const res = await fetch(`${API}/runs/${encodeURIComponent(runId)}/response`, { headers: withAuth() })
     if (!res.ok) return null
     const data = await res.json()
     return { runId: data.runId ?? runId, response: data.response ?? '' }
   } catch {
     return null
   }
+}
+
+export interface HumanInputRequestDto {
+  approved: boolean
+  message?: string
+}
+
+export async function submitHumanInput(runId: string, body: HumanInputRequestDto): Promise<void> {
+  const res = await fetch(`${API}/runs/${encodeURIComponent(runId)}/human-input`, {
+    method: 'POST',
+    headers: withAuth({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({
+      approved: !!body.approved,
+      message: body.message ?? '',
+    }),
+  })
+  if (!res.ok) throw new Error(`Human input failed: ${res.status}`)
 }
 
 const SSE_DEBUG = true // set false to disable run-events step logging
@@ -263,7 +320,7 @@ export function streamRunEvents(
   const ac = new AbortController()
   const url = `${API}/runs/${encodeURIComponent(runId)}/events`
   sseLog('1. SSE fetch start', { runId, url })
-  fetch(url, { signal: ac.signal, headers: { Accept: 'text/event-stream' } })
+  fetch(url, { signal: ac.signal, headers: withAuth({ Accept: 'text/event-stream' }) })
     .then(async (res) => {
       sseLog('2. SSE response received', { ok: res.ok, status: res.status, hasBody: !!res.body })
       if (!res.ok || !res.body) {

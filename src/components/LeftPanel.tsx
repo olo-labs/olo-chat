@@ -4,8 +4,6 @@
  */
 
 import { useState } from 'react'
-import { tenantDisplayName } from '../lib/tenantDisplay'
-import type { Tenant } from '../types/tenant'
 import { type SectionConfig, type SectionId } from '../types/layout'
 import { useVisibleSections } from '../hooks/useFeature'
 import { isFeatureEnabled } from '../config/features'
@@ -15,10 +13,14 @@ import { useUIStore } from '../store/ui'
 export interface LeftPanelProps {
   expanded: boolean
   onToggle: () => void
-  tenantId: string
-  onTenantChange: (id: string) => void
-  /** Tenants for dropdown; supplied by App from store (no API calls in components). */
-  tenants: Tenant[]
+  /** User line in footer (from GET /api/ui/context). */
+  userLabel: string
+  /** Tenant display name for footer line "Tenant: …" (from GET /api/ui/context). */
+  tenantLabel: string
+  /** Olo backend version (olo.version from GET /api/ui/context). */
+  oloVersion: string
+  /** olo-chat package version (package.json). */
+  chatVersion: string
   sectionId: SectionId | null
   subId: string
   runSelected: boolean
@@ -30,9 +32,10 @@ type MenuContextMenu = { x: number; y: number; targetSectionId: SectionId | null
 export function LeftPanel({
   expanded,
   onToggle,
-  tenantId,
-  onTenantChange,
-  tenants,
+  userLabel,
+  tenantLabel,
+  oloVersion,
+  chatVersion,
   sectionId,
   subId,
   runSelected,
@@ -92,28 +95,6 @@ export function LeftPanel({
     <aside className={`left-panel ${expanded ? 'expanded' : 'collapsed'}`}>
       {expanded && (
         <div className="left-panel-inner">
-          <div className="left-panel-tenant">
-            <label className="left-panel-tenant-label">Tenant</label>
-            <select
-              aria-label="Tenant (from /api/tenants)"
-              className="left-panel-tenant-select"
-              value={
-                tenantId && tenants.some((t) => t.id === tenantId)
-                  ? tenantId
-                  : tenants.length > 0
-                    ? tenants[0].id
-                    : ''
-              }
-              onChange={(e) => onTenantChange(e.target.value)}
-            >
-              <option value="">Select tenant</option>
-              {tenants.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {tenantDisplayName(t)}
-                </option>
-              ))}
-            </select>
-          </div>
           <nav
             className="left-panel-menu"
             onContextMenu={(e) => handleMenuContextMenu(e, null)}
@@ -226,9 +207,14 @@ export function LeftPanel({
           )}
           <footer className="left-panel-footer">
             <div className="left-panel-footer-top">
-              <div className="left-panel-user">
-                <span className="left-panel-user-bubble" aria-hidden />
-                <span className="left-panel-user-label">Public User</span>
+              <div className="left-panel-user-block">
+                <div className="left-panel-user">
+                  <span className="left-panel-user-bubble" aria-hidden />
+                  <span className="left-panel-user-label">{userLabel}</span>
+                </div>
+                <div className="left-panel-tenant-line" title={`Tenant: ${tenantLabel}`}>
+                  Tenant: {tenantLabel}
+                </div>
               </div>
               <button
                 type="button"
@@ -251,9 +237,23 @@ export function LeftPanel({
                 </span>
               </button>
             </div>
-            <div className="left-panel-version">OLO v0.0.1</div>
+            <div className="left-panel-version" title="Olo backend (GET /api/ui/context)">
+              OLO {oloVersion}
+            </div>
+            <div className="left-panel-chat-version" title="olo-chat (package.json)">
+              olo-chat v{chatVersion}
+            </div>
             <div className="left-panel-copyright">© {new Date().getFullYear()} OLO</div>
           </footer>
+          <button
+            type="button"
+            className="left-panel-toggle"
+            onClick={onToggle}
+            title="Collapse"
+            aria-label="Collapse menu"
+          >
+            {'<'}
+          </button>
         </div>
       )}
       {!expanded && (
@@ -292,17 +292,6 @@ export function LeftPanel({
             </button>
           </div>
         </>
-      )}
-      {expanded && (
-        <button
-          type="button"
-          className="left-panel-toggle"
-          onClick={onToggle}
-          title="Collapse"
-          aria-label="Collapse menu"
-        >
-          {'<'}
-        </button>
       )}
     </aside>
   )

@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, type CSSProperties } from 'react'
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { TopBar } from './components/TopBar'
 import { LeftPanel } from './components/LeftPanel'
 import { ToolsPanel } from './components/ToolsPanel'
@@ -31,14 +31,16 @@ import type { SectionId } from './types/layout'
 import { isFeatureEnabled } from './config/features'
 import type { FeatureId } from './config/features'
 import { logEvent } from './lib/observability'
-import { getLastTenantId, setLastTenantId } from './lib/lastTenant'
+import { getUiContext, tenantIdForApiPath } from './api/chatApi'
+import { OLO_CHAT_VERSION } from './version'
 import { useWebSocketLiveness } from './hooks/useWebSocketLiveness'
+
+const DEFAULT_OLO_VERSION = 'v1.0.0-Dev'
 
 function App() {
   useWebSocketLiveness()
   const location = useLocation()
   const navigate = useNavigate()
-  const [, setSearchParams] = useSearchParams()
 
   const {
     leftPanelExpanded,
@@ -59,8 +61,34 @@ function App() {
   const runSelected = false
   const isTenantConfig = false
   const [newChatTrigger, setNewChatTrigger] = useState(0)
+  const [uiFooter, setUiFooter] = useState<{
+    tenant: string
+    user: string
+    oloVersion: string
+  }>({
+    tenant: 'Default',
+    user: 'Public',
+    oloVersion: DEFAULT_OLO_VERSION,
+  })
 
-  // URL → store sync: path, tenant, and panel query (enables deep links, back/forward, bookmarking)
+  // Default tenant id, footer labels, and Olo version from backend (application.properties / env)
+  useEffect(() => {
+    let cancelled = false
+    getUiContext().then((ctx) => {
+      if (cancelled || !ctx) return
+      setTenantId(tenantIdForApiPath(ctx.tenantId))
+      setUiFooter({
+        tenant: ctx.tenant,
+        user: ctx.user,
+        oloVersion: ctx.oloVersion?.trim() || DEFAULT_OLO_VERSION,
+      })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [setTenantId])
+
+  // URL → store sync: path and panel query (enables deep links, back/forward, bookmarking)
   useEffect(() => {
     const pathname = location.pathname || '/'
     if (pathname === '/' || pathname === '') {
@@ -85,9 +113,8 @@ function App() {
     setSectionSub(parsed.sectionId, parsed.subId)
     setRunId(parsed.runId ?? '')
     const q = parseQuery(location.search)
-    setTenantId(q.tenantId)
     useUIStore.getState().setPanelStateFromUrl(q.menuExpanded, q.toolsExpanded, q.propsExpanded)
-  }, [location.pathname, location.search, location.key, navigate, setSectionSub, setRunId, setTenantId])
+  }, [location.pathname, location.search, location.key, navigate, setSectionSub, setRunId])
 
   useEffect(() => {
     tenantConfigStore.getState().loadTenants()
@@ -99,41 +126,7 @@ function App() {
     }
   }, [sectionId, subId, runId])
 
-  // Default tenant when URL has none: previously selected (if in list) or top tenant from backend list (OLO_TENANT_IDS), else "default"
   const tenants = tenantConfigStore((s) => s.tenants)
-  useEffect(() => {
-    const q = parseQuery(location.search)
-    if (q.tenantId !== '') return
-    const last = getLastTenantId()
-    const defaultId =
-      tenants.length > 0 && last && tenants.some((t) => t.id === last)
-        ? last
-        : tenants.length > 0
-          ? tenants[0].id
-          : 'default'
-    setTenantId(defaultId)
-    setLastTenantId(defaultId)
-    const params = parsedToPanelParams(q)
-    navigate(location.pathname + '?' + buildQuery({ ...params, tenantId: defaultId }), {
-      replace: true,
-    })
-  }, [location.pathname, location.search, tenants, navigate, setTenantId])
-
-  // When tenants load, if current tenant is not in list, select top tenant (or keep previous if in list)
-  useEffect(() => {
-    if (tenants.length === 0) return
-    const q = parseQuery(location.search)
-    const current = q.tenantId
-    if (!current || tenants.some((t) => t.id === current)) return
-    const last = getLastTenantId()
-    const fallbackId = last && tenants.some((t) => t.id === last) ? last : tenants[0].id
-    setTenantId(fallbackId)
-    setLastTenantId(fallbackId)
-    const params = parsedToPanelParams(q)
-    navigate(location.pathname + '?' + buildQuery({ ...params, tenantId: fallbackId }), {
-      replace: true,
-    })
-  }, [tenants, location.pathname, location.search, navigate, setTenantId])
 
   const q = parseQuery(location.search)
 
@@ -146,15 +139,6 @@ function App() {
   const handleSectionSubSelect = (sid: SectionId, sub: string) => {
     const params = parsedToPanelParams(q)
     navigate(buildPathWithQuery(buildPath(sid, sub), { ...params, props: 0 }))
-  }
-
-  const handleTenantChange = (id: string) => {
-    setLastTenantId(id)
-    const params = parsedToPanelParams(q)
-    setSearchParams(
-      new URLSearchParams(buildQuery({ ...params, tenantId: id })),
-      { replace: true }
-    )
   }
 
   const handleRunIdChange = (id: string) => {
@@ -198,9 +182,10 @@ function App() {
         <LeftPanel
           expanded={leftPanelExpanded}
           onToggle={handleToggleLeftPanel}
-          tenantId={tenantId}
-          onTenantChange={handleTenantChange}
-          tenants={tenants}
+          userLabel={`${uiFooter.user} User`}
+          tenantLabel={uiFooter.tenant}
+          oloVersion={uiFooter.oloVersion}
+          chatVersion={OLO_CHAT_VERSION}
           sectionId={sectionId}
           subId={subId}
           runSelected={runSelected}

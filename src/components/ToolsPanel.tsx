@@ -93,7 +93,8 @@ export function ToolsPanel({
   const removeSessionsDisplay = sessionDisplayStore((s) => s.removeSessions)
   const isChatView = sectionId === 'chat'
   const isKnowledgeView = sectionId === 'knowledge'
-  const effectiveTenantId = tenantId || 'default'
+  /** Wait for App to set tenant from GET /api/ui/context — do not use "default" or the queues API runs twice. */
+  const effectiveTenantId = tenantId?.trim() ?? ''
   const sessions = chatSessionsStore((s) => s.sessions)
   const selectedSessionId = chatSessionsStore((s) => s.selectedSessionId)
   const setSessions = chatSessionsStore((s) => s.setSessions)

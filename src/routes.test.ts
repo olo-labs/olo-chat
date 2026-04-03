@@ -7,7 +7,6 @@ import { describe, it, expect } from 'vitest'
 import {
   parsePath,
   buildPath,
-  buildPathWithTenant,
   buildPathWithQuery,
   parseQuery,
   buildQuery,
@@ -96,28 +95,9 @@ describe('routes', () => {
     })
   })
 
-  describe('buildPathWithTenant', () => {
-    it('returns pathname when tenantId is empty', () => {
-      expect(buildPathWithTenant('/chat/conversation', '')).toBe('/chat/conversation')
-    })
-
-    it('appends tenant query when tenantId is set', () => {
-      expect(buildPathWithTenant('/chat/conversation', 'tenant-1')).toBe(
-        '/chat/conversation?tenant=tenant-1'
-      )
-    })
-
-    it('encodes tenantId in query', () => {
-      expect(buildPathWithTenant('/knowledge/sources', 'a=b&c')).toBe(
-        '/knowledge/sources?tenant=a%3Db%26c'
-      )
-    })
-  })
-
   describe('parseQuery', () => {
     it('returns defaults when search is empty', () => {
       expect(parseQuery('')).toEqual({
-        tenantId: '',
         menuExpanded: true,
         toolsExpanded: false,
         propsExpanded: false,
@@ -134,29 +114,23 @@ describe('routes', () => {
       expect(q.propsExpanded).toBe(true)
     })
 
-    it('parses tenant from query', () => {
-      expect(parseQuery('?tenant=abc').tenantId).toBe('abc')
-    })
   })
 
   describe('buildQuery and buildPathWithQuery', () => {
-    it('buildQuery outputs menu, tools, props and tenant when set', () => {
-      const q = buildQuery({ tenantId: 'x', menu: 1, tools: 0, props: 0 })
+    it('buildQuery outputs menu, tools, props', () => {
+      const q = buildQuery({ menu: 1, tools: 0, props: 0 })
       expect(q).toContain('menu=1')
       expect(q).toContain('tools=0')
       expect(q).toContain('props=0')
-      expect(q).toContain('tenant=x')
     })
 
     it('buildPathWithQuery appends query to pathname', () => {
       const url = buildPathWithQuery('/chat/conversation', {
-        tenantId: 't1',
         menu: 0,
         tools: 1,
         props: 0,
       })
       expect(url).toContain('/chat/conversation?')
-      expect(url).toContain('tenant=t1')
       expect(url).toContain('menu=0')
       expect(url).toContain('tools=1')
     })
@@ -164,9 +138,8 @@ describe('routes', () => {
 
   describe('parsedToPanelParams', () => {
     it('converts ParsedQuery to buildQuery params', () => {
-      const q = parseQuery('?tenant=abc&menu=0&tools=1&props=0')
+      const q = parseQuery('?menu=0&tools=1&props=0')
       const params = parsedToPanelParams(q)
-      expect(params.tenantId).toBe('abc')
       expect(params.menu).toBe(0)
       expect(params.tools).toBe(1)
       expect(params.props).toBe(0)

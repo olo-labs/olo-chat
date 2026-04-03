@@ -13,6 +13,7 @@ import {
   listSessions,
   sendMessage,
   streamRunEvents,
+  submitHumanInput,
   type ChatMessageDto,
   type RunEventDto,
 } from '../api/chatApi'
@@ -22,9 +23,6 @@ import { conversationPanelStore } from '../store/conversationPanel'
 import { sessionDisplayStore } from '../store/sessionDisplay'
 import { queueDisplayName } from '../lib/queueDisplayName'
 import { getCurrentSocket, subscribeToRun } from '../lib/wsSingleton'
-
-/** Default tenant from backend (OLO_TENANT_IDS=default, olo:tenants). */
-const DEFAULT_TENANT_ID = 'default'
 
 /** Extract assistant reply text from MODEL node output; supports content, text, message, and nested shapes. */
 function extractAssistantText(output: unknown): string | null {
@@ -87,6 +85,10 @@ const COMMON_MESSAGES = [
   'What are the main pros and cons?',
 ]
 
+function stringValue(v: unknown): string | null {
+  return typeof v === 'string' && v.trim().length > 0 ? v.trim() : null
+}
+
 export interface ChatViewProps {
   tenantId?: string
   /** Workflow queue name (from left bar selection); sent as taskQueue when sending messages. */
@@ -96,7 +98,7 @@ export interface ChatViewProps {
 }
 
 export function ChatView({ tenantId: tenantIdProp, taskQueue, newChatTrigger = 0 }: ChatViewProps) {
-  const tenantId = tenantIdProp || DEFAULT_TENANT_ID
+  const tenantId = tenantIdProp?.trim() ?? ''
   const selectedPipelineId = conversationPanelStore((s) => s.selectedPipelineId)
   const sessions = chatSessionsStore((s) => s.sessions)
   const sessionId = chatSessionsStore((s) => s.selectedSessionId)
@@ -115,6 +117,8 @@ export function ChatView({ tenantId: tenantIdProp, taskQueue, newChatTrigger = 0
   const [runCompletedFromPoll, setRunCompletedFromPoll] = useState(false)
   /** Current response from GET /api/runs/{runId}/response — queried when we receive events or poll while in progress */
   const [queriedResponse, setQueriedResponse] = useState<string | null>(null)
+  const [humanInputText, setHumanInputText] = useState('')
+  const [submittingHumanInput, setSubmittingHumanInput] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const unsubscribeRunRef = useRef<(() => void) | null>(null)
   /** Session id we just created (New chat); avoid clearing selection when list doesn't include it yet. */
@@ -442,6 +446,54 @@ export function ChatView({ tenantId: tenantIdProp, taskQueue, newChatTrigger = 0
   // Don't show the inline assistant block if the last message is already assistant (from listMessages refetch) — avoids duplicate
   const lastMessageIsAssistant = messages.length > 0 && messages[messages.length - 1].role === 'assistant'
   const showInlineAssistant = displayAssistantText && !lastMessageIsAssistant
+  const latestHumanWaiting = [...runEvents]
+    .reverse()
+    .find((e) => e.nodeType?.toUpperCase() === 'HUMAN' && e.status?.toUpperCase() === 'WAITING')
+  const hasHumanCompletedAfterWait = latestHumanWaiting
+    ? runEvents.some(
+        (e) =>
+          e.nodeType?.toUpperCase() === 'HUMAN' &&
+          e.status?.toUpperCase() === 'COMPLETED' &&
+          e.nodeId === latestHumanWaiting.nodeId &&
+          (e.sequenceNumber ?? 0) >= (latestHumanWaiting.sequenceNumber ?? 0)
+      )
+    : false
+  const pendingHumanEvent = latestHumanWaiting && !hasHumanCompletedAfterWait ? latestHumanWaiting : null
+  const humanPromptMessage =
+    stringValue(pendingHumanEvent?.input?.message) ??
+    stringValue(pendingHumanEvent?.metadata?.message) ??
+    'This run needs your input.'
+  const humanTaskId =
+    stringValue(pendingHumanEvent?.metadata?.taskId) ??
+    stringValue(pendingHumanEvent?.output?.taskId) ??
+    pendingHumanEvent?.nodeId ??
+    'human-input'
+  const humanInputType = (
+    stringValue(pendingHumanEvent?.metadata?.inputType) ??
+    stringValue(pendingHumanEvent?.output?.inputType) ??
+    'boolean'
+  ).toLowerCase()
+
+  const handleSubmitHumanInput = useCallback(
+    async (approved: boolean, message: string) => {
+      if (!pendingHumanEvent?.runId) return
+      setSubmittingHumanInput(true)
+      setError(null)
+      try {
+        await submitHumanInput(pendingHumanEvent.runId, { approved, message })
+        if (sessionId) {
+          listMessages(sessionId).then(setMessages).catch(() => {})
+        }
+        setHumanInputText('')
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e)
+        setError(msg)
+      } finally {
+        setSubmittingHumanInput(false)
+      }
+    },
+    [pendingHumanEvent, sessionId]
+  )
 
   if (!connected) {
     return (
@@ -527,6 +579,51 @@ export function ChatView({ tenantId: tenantIdProp, taskQueue, newChatTrigger = 0
       {sending && (
         <div className="chat-view-waiting" role="status" aria-live="polite">
           Waiting for response…
+        </div>
+      )}
+      {pendingHumanEvent && (
+        <div className="chat-view-human-card" role="region" aria-live="polite">
+          <div className="chat-view-human-title">Input required</div>
+          <div className="chat-view-human-message">{humanPromptMessage}</div>
+          <div className="chat-view-human-task">Task: {humanTaskId}</div>
+          {humanInputType === 'text' ? (
+            <div className="chat-view-human-controls">
+              <input
+                className="chat-view-human-text-input"
+                placeholder="Enter your input"
+                value={humanInputText}
+                onChange={(e) => setHumanInputText(e.target.value)}
+                disabled={submittingHumanInput}
+              />
+              <button
+                type="button"
+                className="chat-view-human-btn chat-view-human-btn-primary"
+                disabled={submittingHumanInput || !humanInputText.trim()}
+                onClick={() => handleSubmitHumanInput(true, humanInputText.trim())}
+              >
+                {submittingHumanInput ? 'Submitting…' : 'Submit'}
+              </button>
+            </div>
+          ) : (
+            <div className="chat-view-human-controls">
+              <button
+                type="button"
+                className="chat-view-human-btn chat-view-human-btn-primary"
+                disabled={submittingHumanInput}
+                onClick={() => handleSubmitHumanInput(true, 'Yes')}
+              >
+                {submittingHumanInput ? 'Submitting…' : 'Yes, use dynamic flow'}
+              </button>
+              <button
+                type="button"
+                className="chat-view-human-btn"
+                disabled={submittingHumanInput}
+                onClick={() => handleSubmitHumanInput(false, 'No')}
+              >
+                No, direct response only
+              </button>
+            </div>
+          )}
         </div>
       )}
       <div className="chat-view-suggestions">
