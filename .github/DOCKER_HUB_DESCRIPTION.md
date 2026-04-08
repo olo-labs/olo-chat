@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Olo Chat (frontend)
 
-Chat UI for **Olo** — create sessions, send messages, and stream run events in real time. This image serves the frontend; it expects an **Olo backend** for API and WebSocket.
+Chat UI for **Olo** — create sessions, send messages, and stream run events in real time. When the backend exposes **chat profiles**, pick a preset beside the composer; **run again** offers other presets (emoji + name) under user messages. Run events can persist locally (last 200 per run) and the UI dedupes replay after refresh. This image serves the frontend; it expects an **Olo backend** for API and WebSocket.
 
 ## Quick run
 
@@ -38,9 +38,10 @@ The app uses this URL for REST (`/api`) and derives the WebSocket URL from it.
 | `VITE_API_BASE` | `http://localhost:7080` | Backend base URL (no trailing slash). |
 | `VITE_WS_PING_INTERVAL_SEC` | `10` | WebSocket ping interval (seconds). |
 | `VITE_WS_ACCESS_TOKEN` | _(empty)_ | Optional WebSocket token (usually leave unset). |
-| `VITE_RAG_OPTIONS` | _(empty)_ | Comma-separated RAG ids for Documents upload. |
-| `VITE_RAG_QUEUE` | _(empty)_ | Task queue for RAG upload workflow. |
-| `VITE_RAG_PIPELINE` | _(empty)_ | Pipeline id for RAG upload workflow. |
+| `VITE_CAPABILITY_SOURCE_OPTIONS` | _(empty)_ | Comma-separated capability source ids for Documents upload (preferred). |
+| `VITE_RAG_OPTIONS` | _(empty)_ | Legacy alias for capability source ids if `VITE_CAPABILITY_SOURCE_OPTIONS` is unset. |
+| `VITE_RESOURCE_UPLOAD_QUEUE` | _(empty)_ | Optional task queue after resource upload (legacy: `VITE_RAG_QUEUE`). |
+| `VITE_RESOURCE_UPLOAD_PIPELINE` | _(empty)_ | Optional pipeline id after upload (legacy: `VITE_RAG_PIPELINE`). |
 
 ## CORS and WebSocket
 

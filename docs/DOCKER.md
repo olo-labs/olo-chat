@@ -12,7 +12,7 @@ This document describes how to build and run the olo-chat frontend as a Docker c
 ## Overview
 
 - **Dockerfile** — Multi-stage: stage 1 uses Node to build the Vite app (`npm ci`, `npm run build`); stage 2 uses Nginx to serve the static `dist` on **port 80**. No runtime env; all config is baked in at build time.
-- **Environment variables** — All `VITE_*` values are **baked in at build time** by Vite. You pass them as Docker build args (or Compose `args` / CI variables). Changing the backend URL or RAG options requires a rebuild.
+- **Environment variables** — All `VITE_*` values are **baked in at build time** by Vite. You pass them as Docker build args (or Compose `args` / CI variables). Changing the backend URL or Documents upload options requires a rebuild.
 - **GitHub Actions** — Workflow (`.github/workflows/docker-build.yml`) runs on push to `main`/`master` and on manual `workflow_dispatch`. Builds the image and pushes to GitHub Container Registry (ghcr.io). If repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` are set, also pushes to Docker Hub as `docker.io/<DOCKERHUB_USERNAME>/olo-chat`. Manual run has a **push** input (default: true) to control whether to push to registries.
 
 ---
@@ -26,11 +26,14 @@ These are the only environment variables the frontend uses. They must be set at 
 | **VITE_API_BASE** | Yes (for API/WS) | `http://localhost:7080` | Base URL of the olo backend. The app will call `{VITE_API_BASE}/api` for REST and `ws://...` derived from this for WebSocket. No trailing slash. Examples: `http://localhost:7080`, `https://api.example.com`. |
 | **VITE_WS_ACCESS_TOKEN** | No | _(empty)_ | Optional WebSocket access token. If set, it is used when the app has no token in `sessionStorage` (e.g. before login). Prefer setting the token at runtime via login and `sessionStorage.accessToken`. |
 | **VITE_WS_PING_INTERVAL_SEC** | No | `10` | WebSocket ping interval (and reconnect delay) in seconds. Used for liveness checks. |
-| **VITE_RAG_OPTIONS** | No | _(empty)_ | Comma-separated list of existing RAG ids/names for the Documents → RAG upload dropdown (e.g. `default,project-alpha`). |
-| **VITE_RAG_QUEUE** | No | _(empty)_ | Workflow task queue used when starting the RAG upload workflow (queue/pipeline from env). |
-| **VITE_RAG_PIPELINE** | No | _(empty)_ | Workflow pipeline id used when starting the RAG upload workflow. |
+| **VITE_CAPABILITY_SOURCE_OPTIONS** | No | _(empty)_ | Comma-separated **capability source** ids for the Documents upload dropdown (e.g. `product-docs,legal`). Preferred over `VITE_RAG_OPTIONS`. |
+| **VITE_RAG_OPTIONS** | No | _(empty)_ | Legacy alias for `VITE_CAPABILITY_SOURCE_OPTIONS` if the new variable is unset. |
+| **VITE_RESOURCE_UPLOAD_QUEUE** | No | _(empty)_ | Optional workflow task queue after resource upload (e.g. indexing). Preferred over `VITE_RAG_QUEUE`. |
+| **VITE_RESOURCE_UPLOAD_PIPELINE** | No | _(empty)_ | Optional pipeline id for that post-upload workflow. Preferred over `VITE_RAG_PIPELINE`. |
+| **VITE_RAG_QUEUE** | No | _(empty)_ | Legacy: used if `VITE_RESOURCE_UPLOAD_QUEUE` is unset. |
+| **VITE_RAG_PIPELINE** | No | _(empty)_ | Legacy: used if `VITE_RESOURCE_UPLOAD_PIPELINE` is unset. |
 
-**Where used** — `VITE_API_BASE`, `VITE_WS_ACCESS_TOKEN`, `VITE_WS_PING_INTERVAL_SEC` in `api/chatApi.ts`, `lib/wsUrl.ts`, `hooks/useWebSocketLiveness.ts`. RAG vars in `api/ragApi.ts` and Documents upload UI.
+**Where used** — `VITE_API_BASE`, `VITE_WS_ACCESS_TOKEN`, `VITE_WS_PING_INTERVAL_SEC` in `api/chatApi.ts`, `lib/wsUrl.ts`, `hooks/useWebSocketLiveness.ts`. Upload / capability-source vars in `api/documentsUploadApi.ts` and Documents UI.
 
 ### Notes
 
@@ -211,7 +214,7 @@ echo <PAT> | docker login ghcr.io -u <user> --password-stdin
 - **Blank page or wrong API URL** — Rebuild the image with the correct `VITE_API_BASE` for the environment where the app is served. The browser must be able to reach that URL for REST and WebSocket.
 - **CORS errors** — Configure the olo backend to allow the origin of the frontend (scheme + host + port). The origin is where the user opens the app (e.g. `http://localhost:3000` or your production domain).
 - **WebSocket fails** — Ensure `VITE_API_BASE` uses the same host/port the browser should use for WebSocket (e.g. `wss://` in production). The app derives the WebSocket URL from `VITE_API_BASE` (e.g. `https://api.example.com` → `wss://api.example.com/ws`).
-- **Documents upload dropdown empty** — Set `VITE_RAG_OPTIONS` at build time (comma-separated RAG ids) and rebuild.
+- **Documents upload dropdown empty** — Set `VITE_CAPABILITY_SOURCE_OPTIONS` or `VITE_RAG_OPTIONS` at build time (comma-separated capability source ids) and rebuild.
 
 ---
 

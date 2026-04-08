@@ -9,11 +9,11 @@ A chat interface for **Olo** — start conversations, send messages, and follow 
 
 ## For users
 
-- **Chat** — Pick a queue and pipeline, create a session, and chat. Run events (planner, model, tools) stream live in the sidebar.
+- **Chat** — Either pick a **preset** (when the backend exposes **chat profiles** from pipeline config: name, summary, optional emoji, optional **run again** flag) or a **queue** and **pipeline** in the Conversation panel, then create a session and chat. Subtitle **Conversation with Olo AI**. While the model runs, you see **who is thinking** and a short **summary** line; message history can show **which preset** was used per turn. **Run again** (under user messages) lists other presets by **emoji + name**. Run events in the **Events** sidebar; **human** steps show **buttons** from the worker.
 - **Knowledge** — Manage knowledge sources and see status (sources, create, status).
 - **Documents** — Upload files and run RAG workflows from the UI.
 
-The app talks to the **Olo backend** for sessions, messages, and events. You choose your tenant, queue, and pipeline from the UI.
+The app talks to the **Olo backend** for sessions, messages, and events. **Tenant** is determined by the backend (auth / context); you choose **queue** and **pipeline** in the Conversation panel.
 
 ## Quick start
 

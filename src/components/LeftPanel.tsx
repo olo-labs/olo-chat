@@ -7,7 +7,6 @@ import { useState } from 'react'
 import { type SectionConfig, type SectionId } from '../types/layout'
 import { useVisibleSections } from '../hooks/useFeature'
 import { isFeatureEnabled } from '../config/features'
-import { runEventsStore } from '../store/runEvents'
 import { useUIStore } from '../store/ui'
 
 export interface LeftPanelProps {
@@ -44,7 +43,7 @@ export function LeftPanel({
   const [expandedCategories, setExpandedCategories] = useState<Set<SectionId>>(new Set())
   const [menuContext, setMenuContext] = useState<MenuContextMenu | null>(null)
   const sections = useVisibleSections()
-  const hasEventsToReview = runEventsStore((s) => s.events.length) > 0
+  const runEventsBellUnread = useUIStore((s) => s.runEventsBellUnread)
 
   const toggleCategory = (id: SectionId) => {
     setExpandedCategories((prev) => {
@@ -219,15 +218,15 @@ export function LeftPanel({
               <button
                 type="button"
                 className="left-panel-bell-wrap"
-                title={hasEventsToReview ? 'Events to review — click to open Events panel' : 'Notifications — click to open Events panel'}
+                title={runEventsBellUnread ? 'New run events — click to open Events panel' : 'Notifications — click to open Events panel'}
                 onClick={() => useUIStore.getState().togglePropertiesPanel()}
-                aria-label="Toggle Events panel"
+                aria-label={runEventsBellUnread ? 'New run events — open Events panel' : 'Toggle Events panel'}
               >
                 <span className="left-panel-bell-tooltip" role="tooltip">
-                  {hasEventsToReview ? 'Events to review — see Events panel' : 'Notifications'}
+                  {runEventsBellUnread ? 'New run events — open Events panel' : 'Notifications'}
                 </span>
                 <span
-                  className={`left-panel-footer-bell ${hasEventsToReview ? 'left-panel-footer-bell-has-events' : ''}`}
+                  className={`left-panel-footer-bell ${runEventsBellUnread ? 'left-panel-footer-bell-has-events' : ''}`}
                   aria-hidden
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -273,15 +272,15 @@ export function LeftPanel({
             <button
               type="button"
               className="left-panel-bell-wrap"
-              title={hasEventsToReview ? 'Events to review — click to open Events panel' : 'Notifications — click to open Events panel'}
+              title={runEventsBellUnread ? 'New run events — click to open Events panel' : 'Notifications — click to open Events panel'}
               onClick={() => useUIStore.getState().togglePropertiesPanel()}
-              aria-label="Toggle Events panel"
+              aria-label={runEventsBellUnread ? 'New run events — open Events panel' : 'Toggle Events panel'}
             >
               <span className="left-panel-bell-tooltip" role="tooltip">
-                {hasEventsToReview ? 'Events to review — see Events panel' : 'Notifications'}
+                {runEventsBellUnread ? 'New run events — open Events panel' : 'Notifications'}
               </span>
               <span
-                className={`left-panel-footer-bell ${hasEventsToReview ? 'left-panel-footer-bell-has-events' : ''}`}
+                className={`left-panel-footer-bell ${runEventsBellUnread ? 'left-panel-footer-bell-has-events' : ''}`}
                 aria-hidden
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

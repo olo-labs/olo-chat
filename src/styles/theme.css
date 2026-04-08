@@ -3,6 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/* Native form controls (e.g. <select> popup on Windows/Chromium) respect color-scheme. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
 /* Light theme overrides. Toggle in top bar; persisted in localStorage. */
 [data-theme="light"] body,
 [data-theme="light"] .app,
@@ -45,6 +53,12 @@
   background: #f4f4f5;
   border-color: #d4d4d8;
   color: #18181b;
+  color-scheme: light;
+}
+
+[data-theme="light"] .conversation-pipeline-select option {
+  background-color: #ffffff;
+  color: #18181b;
 }
 [data-theme="light"] .conversation-pipeline-loading,
 [data-theme="light"] .conversation-pipeline-empty { color: #71717a; }
@@ -82,6 +96,9 @@
   background: #e4e4e7;
   border-color: #d4d4d8;
   color: #18181b;
+}
+[data-theme="light"] .main-content-run-select-el {
+  color-scheme: light;
 }
 [data-theme="light"] .tenant-config-btn.primary { background: #3b82f6; border-color: #3b82f6; color: #fff; }
 [data-theme="light"] .tenant-config-list-item { color: #18181b; }
@@ -131,7 +148,123 @@
   color: #18181b;
   border-color: #a1a1aa;
 }
-[data-theme="light"] .chat-view-input-bar { border-top-color: #e4e4e7; background: #f4f4f5; }
+[data-theme="light"] .chat-view-composer { border-top-color: #e4e4e7; background: #f4f4f5; }
+[data-theme="light"] .chat-view-profile-select {
+  background: #fff;
+  border-color: #d4d4d8;
+  color: #18181b;
+}
+[data-theme="light"] .chat-view-profile-select--pill {
+  background: linear-gradient(180deg, #fff 0%, #f4f4f5 100%);
+}
+[data-theme="light"] .chat-view-message-config {
+  color: #52525b;
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.2);
+}
+[data-theme="light"] .chat-view-waiting {
+  color: #52525b;
+  border-bottom-color: #e4e4e7;
+  background: rgba(244, 244, 245, 0.95);
+}
+[data-theme="light"] .chat-view-waiting-text strong { color: #18181b; }
+[data-theme="light"] .chat-view-waiting-summary { color: #71717a; }
+[data-theme="light"] .chat-view-rerun {
+  border-top-color: #e4e4e7;
+  background: #fafafa;
+}
+[data-theme="light"] .chat-view-rerun-chip {
+  background: #fff;
+  border-color: #d4d4d8;
+  color: #18181b;
+}
+[data-theme="light"] .chat-view-rerun-chip:hover:not(:disabled) {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.08);
+}
+
+[data-theme="light"] .chat-view-msg-runagain > summary {
+  color: #71717a;
+  border-color: #d4d4d8;
+  background: #fff;
+}
+[data-theme="light"] .chat-view-msg-runagain > summary:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.08);
+}
+[data-theme="light"] .chat-view-msg-runagain-menu {
+  background: #fff;
+  border-color: #e4e4e7;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+[data-theme="light"] .chat-view-msg-runagain-opt {
+  background: #fafafa;
+  border-color: #d4d4d8;
+  color: #18181b;
+}
+[data-theme="light"] .chat-view-msg-runagain-opt:hover:not(:disabled) {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.08);
+}
+
+[data-theme="light"] .documents-page-toolbar {
+  border-bottom-color: #e4e4e7;
+}
+[data-theme="light"] .documents-page-search-input {
+  background: #fff;
+  border-color: #d4d4d8;
+  color: #18181b;
+}
+[data-theme="light"] .documents-page-empty,
+[data-theme="light"] .documents-page-empty-soft {
+  background: #fafafa;
+  border-color: #e4e4e7;
+}
+[data-theme="light"] .documents-page-empty-title {
+  color: #52525b;
+}
+[data-theme="light"] .documents-page-table-wrap {
+  border-color: #e4e4e7;
+  background: #fff;
+}
+[data-theme="light"] .documents-page-table th {
+  background: #f4f4f5;
+  color: #71717a;
+  border-bottom-color: #e4e4e7;
+}
+[data-theme="light"] .documents-page-table td {
+  border-bottom-color: #e4e4e7;
+  color: #18181b;
+}
+[data-theme="light"] .documents-page-action-btn {
+  background: #f4f4f5;
+  border-color: #d4d4d8;
+}
+[data-theme="light"] .documents-page-hint {
+  color: #71717a;
+}
+[data-theme="light"] .documents-page-hint code {
+  color: #52525b;
+}
+[data-theme="light"] .documents-modal {
+  background: #fff;
+  border-color: #e4e4e7;
+}
+[data-theme="light"] .documents-modal-header,
+[data-theme="light"] .documents-modal-footer {
+  border-color: #e4e4e7;
+}
+[data-theme="light"] .documents-modal-title {
+  color: #18181b;
+}
+[data-theme="light"] .documents-modal-text {
+  color: #52525b;
+}
+[data-theme="light"] .documents-modal-new-source {
+  background: #fafafa;
+  border-color: #e4e4e7;
+}
 
 /* Scrollbars: align with theme (dark default) */
 * {

@@ -92,6 +92,10 @@ export interface UIState {
   theme: Theme
   setTheme: (theme: Theme) => void
   toggleTheme: () => void
+
+  /** True when a new workflow run event arrived while the Events (properties) panel was closed. Cleared when the panel opens. */
+  runEventsBellUnread: boolean
+  setRunEventsBellUnread: (v: boolean) => void
 }
 
 export const useUIStore = create<UIState>((set, get) => ({
@@ -106,6 +110,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   runId: '',
   tenantId: '',
   theme: getInitialTheme(),
+  runEventsBellUnread: false,
 
   toggleLeftPanel: () => set((s) => ({ leftPanelExpanded: !s.leftPanelExpanded })),
   toggleToolsPanel: () => set((s) => ({ toolsPanelExpanded: !s.toolsPanelExpanded })),
@@ -151,6 +156,8 @@ export const useUIStore = create<UIState>((set, get) => ({
     const next = get().theme === 'dark' ? 'light' : 'dark'
     get().setTheme(next)
   },
+
+  setRunEventsBellUnread: (v) => set({ runEventsBellUnread: v }),
 }))
 
 // Apply theme on load

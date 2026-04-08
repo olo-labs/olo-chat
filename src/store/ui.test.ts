@@ -12,6 +12,7 @@ describe('UI store', () => {
       sectionId: null,
       subId: '',
       propertiesPanelExpanded: false,
+      runEventsBellUnread: false,
     })
   })
 

@@ -71,6 +71,20 @@ export interface TenantDto {
   name: string
 }
 
+/** One chat profile from regional/worker config (replaces separate Queue + Pipeline pickers when non-empty). */
+export interface ChatProfileDto {
+  id: string
+  displayName: string
+  /** Short description for tooltips / secondary UI (from pipeline JSON {@code display_summary}). */
+  displaySummary?: string
+  /** Optional emoji from config ({@code emoji} in pipeline JSON); otherwise inferred in the UI. */
+  emoji?: string
+  queue: string
+  pipeline: string
+  /** From pipeline JSON {@code run_again}; when true, profile is offered in per-message run-again UI. */
+  runAgain?: boolean
+}
+
 /** Tenant id, footer labels, and Olo version from GET /api/ui/context. Send Bearer token so tenantId comes from JWT {@code tenantId} claim. */
 export interface UiContextDto {
   tenantId: string
@@ -78,6 +92,8 @@ export interface UiContextDto {
   user: string
   /** Backend release label (olo.version / OLO_VERSION), e.g. v1.0.0-Dev */
   oloVersion: string
+  /** Presets for chat (queue/pipeline per profile); required for the chat UI. */
+  chatProfiles?: ChatProfileDto[]
 }
 
 export async function getUiContext(): Promise<UiContextDto | null> {
@@ -99,45 +115,6 @@ export async function getTenants(): Promise<TenantDto[]> {
     return Array.isArray(data) ? data : []
   } catch {
     return []
-  }
-}
-
-/** Workflow queue names from Redis keys <tenantId>:olo:kernel:config:* (left bar under Chat/RAG). */
-export async function getQueues(tenantId: string): Promise<string[]> {
-  const tid = tenantIdForApiPath(tenantId)
-  if (!tid) return []
-  try {
-    const res = await fetch(`${API}/tenants/${encodeURIComponent(tid)}/queues`, { headers: withAuth() })
-    if (!res.ok) return []
-    const data = await res.json()
-    return Array.isArray(data) ? data : []
-  } catch {
-    return []
-  }
-}
-
-/**
- * Config for a workflow queue from Redis key <tenantId>:olo:kernel:config:<queueName>.
- * `pipelines` from the API is normalized to `{ id, name }[]` for the Conversation dropdown (ids are used as pipelineId).
- */
-export interface QueueConfigDto {
-  pipelines?: Array<string | { id: string; name?: string }>
-  [key: string]: unknown
-}
-
-export async function getQueueConfig(tenantId: string, queueName: string): Promise<QueueConfigDto> {
-  const tid = tenantIdForApiPath(tenantId)
-  if (!tid || !queueName) return {}
-  try {
-    const res = await fetch(
-      `${API}/tenants/${encodeURIComponent(tid)}/queues/${encodeURIComponent(queueName)}/config`,
-      { headers: withAuth() }
-    )
-    if (!res.ok) return {}
-    const data = await res.json()
-    return data != null && typeof data === 'object' ? data : {}
-  } catch {
-    return {}
   }
 }
 

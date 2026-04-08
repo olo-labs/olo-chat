@@ -15,6 +15,7 @@ import { TenantConfigForm } from './components/TenantConfigForm'
 import { EventsList } from './components/EventsList'
 import type { Tenant } from './types/tenant'
 import { useUIStore } from './store/ui'
+import { runEventsStore } from './store/runEvents'
 import { tenantConfigStore } from './store/tenantConfig'
 import {
   parsePath,
@@ -31,14 +32,16 @@ import type { SectionId } from './types/layout'
 import { isFeatureEnabled } from './config/features'
 import type { FeatureId } from './config/features'
 import { logEvent } from './lib/observability'
-import { getUiContext, tenantIdForApiPath } from './api/chatApi'
+import { getUiContext, tenantIdForApiPath, type ChatProfileDto } from './api/chatApi'
 import { OLO_CHAT_VERSION } from './version'
 import { useWebSocketLiveness } from './hooks/useWebSocketLiveness'
+import { useBackendReachable } from './hooks/useBackendReachable'
 
 const DEFAULT_OLO_VERSION = 'v1.0.0-Dev'
 
 function App() {
   useWebSocketLiveness()
+  const backendReachable = useBackendReachable()
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -56,6 +59,7 @@ function App() {
     setRunId,
     setTenantId,
     setSectionSub,
+    setRunEventsBellUnread,
   } = useUIStore()
 
   const runSelected = false
@@ -70,6 +74,7 @@ function App() {
     user: 'Public',
     oloVersion: DEFAULT_OLO_VERSION,
   })
+  const [chatProfiles, setChatProfiles] = useState<ChatProfileDto[]>([])
 
   // Default tenant id, footer labels, and Olo version from backend (application.properties / env)
   useEffect(() => {
@@ -82,11 +87,27 @@ function App() {
         user: ctx.user,
         oloVersion: ctx.oloVersion?.trim() || DEFAULT_OLO_VERSION,
       })
+      setChatProfiles(Array.isArray(ctx.chatProfiles) ? ctx.chatProfiles : [])
     })
     return () => {
       cancelled = true
     }
   }, [setTenantId])
+
+  useEffect(() => {
+    runEventsStore.getState().setOnWorkflowEventAppended(() => {
+      if (!useUIStore.getState().propertiesPanelExpanded) {
+        useUIStore.getState().setRunEventsBellUnread(true)
+      }
+    })
+    return () => runEventsStore.getState().setOnWorkflowEventAppended(null)
+  }, [])
+
+  useEffect(() => {
+    if (propertiesPanelExpanded) {
+      setRunEventsBellUnread(false)
+    }
+  }, [propertiesPanelExpanded, setRunEventsBellUnread])
 
   // URL → store sync: path and panel query (enables deep links, back/forward, bookmarking)
   useEffect(() => {
@@ -207,6 +228,7 @@ function App() {
               tenantId={tenantId}
               storeContext={{}}
               onNewChat={() => setNewChatTrigger((t) => t + 1)}
+              chatProfiles={chatProfiles}
             />
             <PanelResizeHandle
               panel="tools"
@@ -229,6 +251,8 @@ function App() {
           onAddNewTenant={handleAddNewTenant}
           onDeleteTenant={(id) => tenantConfigStore.getState().deleteTenant(id)}
           newChatTrigger={newChatTrigger}
+          chatProfiles={chatProfiles}
+          backendReachable={backendReachable}
         />
         <PanelResizeHandle
           panel="properties"

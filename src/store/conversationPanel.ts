@@ -5,8 +5,12 @@
 
 import { create } from 'zustand'
 
-/** Queue (from GET .../queues) and pipeline (from queue config) selected in the Conversation panel; scopes session list and new sessions. */
+/**
+ * Selected chat profile and derived queue/pipeline (from GET /api/ui/context `chatProfiles`).
+ */
 export interface ConversationPanelState {
+  selectedProfileId: string
+  setSelectedProfileId: (id: string) => void
   selectedQueueId: string
   setSelectedQueueId: (id: string) => void
   selectedPipelineId: string
@@ -14,6 +18,8 @@ export interface ConversationPanelState {
 }
 
 export const conversationPanelStore = create<ConversationPanelState>((set) => ({
+  selectedProfileId: '',
+  setSelectedProfileId: (selectedProfileId) => set({ selectedProfileId }),
   selectedQueueId: '',
   setSelectedQueueId: (selectedQueueId) => set({ selectedQueueId }),
   selectedPipelineId: '',

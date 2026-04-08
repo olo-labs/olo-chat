@@ -5,14 +5,13 @@
 
 /**
  * Contextual tools panel: tools for the current view (section + sub-option).
- * For Chat: Queue dropdown (from GET .../queues) and Pipeline dropdown (from queue config) live here;
- * session list and New chat are scoped by selected queue + pipeline.
+ * For Chat: **New chat** and sessions list. Queue/pipeline for sends come from the selected profile in ChatView.
  */
 
 import { useEffect, useState, useRef } from 'react'
 import type { SectionId } from '../types/layout'
 import { getToolsForView, getToolComponent, type ToolContext } from '../config/toolRegistry'
-import { getQueues, getQueueConfig, deleteAllSessions, deleteSession, type QueueConfigDto } from '../api/chatApi'
+import { deleteAllSessions, deleteSession, type ChatProfileDto } from '../api/chatApi'
 import type { SessionSummaryDto } from '../api/chatApi'
 import { chatSessionsStore } from '../store/chatSessions'
 import { conversationPanelStore } from '../store/conversationPanel'
@@ -32,17 +31,8 @@ export interface ToolsPanelProps {
   storeContext?: Record<string, unknown>
   /** Called when user clicks "New chat" in Conversation (chat section only). */
   onNewChat?: () => void
-}
-
-function pipelinesFromConfig(config: QueueConfigDto): { id: string; label: string }[] {
-  const raw = config?.pipelines
-  if (!Array.isArray(raw) || raw.length === 0) return []
-  return raw.map((p) => {
-    if (typeof p === 'string') return { id: p, label: p }
-    if (p != null && typeof p === 'object' && 'id' in p)
-      return { id: String((p as { id: string }).id), label: String((p as { name?: string }).name ?? (p as { id: string }).id) }
-    return { id: '', label: '' }
-  }).filter((p) => p.id)
+  /** From GET /api/ui/context (used for layout; queue/pipeline live in ChatView). */
+  chatProfiles?: ChatProfileDto[]
 }
 
 function formatSessionLabel(createdAt: number): string {
@@ -73,15 +63,10 @@ export function ToolsPanel({
   tenantId = '',
   storeContext = {},
   onNewChat,
+  chatProfiles: _chatProfiles = [],
 }: ToolsPanelProps) {
-  const [queues, setQueues] = useState<string[]>([])
-  const [queuesLoading, setQueuesLoading] = useState(false)
-  const [pipelines, setPipelines] = useState<{ id: string; label: string }[]>([])
-  const [pipelinesLoading, setPipelinesLoading] = useState(false)
   const selectedQueueId = conversationPanelStore((s) => s.selectedQueueId)
-  const setSelectedQueueId = conversationPanelStore((s) => s.setSelectedQueueId)
   const selectedPipelineId = conversationPanelStore((s) => s.selectedPipelineId)
-  const setSelectedPipelineId = conversationPanelStore((s) => s.setSelectedPipelineId)
   const [deletingAll, setDeletingAll] = useState(false)
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null)
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
@@ -93,7 +78,7 @@ export function ToolsPanel({
   const removeSessionsDisplay = sessionDisplayStore((s) => s.removeSessions)
   const isChatView = sectionId === 'chat'
   const isKnowledgeView = sectionId === 'knowledge'
-  /** Wait for App to set tenant from GET /api/ui/context — do not use "default" or the queues API runs twice. */
+  /** Wait for App to set tenant from GET /api/ui/context — do not use "default" or APIs run twice. */
   const effectiveTenantId = tenantId?.trim() ?? ''
   const sessions = chatSessionsStore((s) => s.sessions)
   const selectedSessionId = chatSessionsStore((s) => s.selectedSessionId)
@@ -106,41 +91,11 @@ export function ToolsPanel({
 
   useEffect(() => {
     if (!isChatView || !effectiveTenantId) {
-      setQueues([])
-      setQueuesLoading(false)
       conversationPanelStore.getState().setSelectedQueueId('')
-      setPipelines([])
       conversationPanelStore.getState().setSelectedPipelineId('')
-      return
+      conversationPanelStore.getState().setSelectedProfileId('')
     }
-    setQueuesLoading(true)
-    getQueues(effectiveTenantId)
-      .then((list) => {
-        setQueues(list)
-        const prev = conversationPanelStore.getState().selectedQueueId
-        conversationPanelStore.getState().setSelectedQueueId(list.includes(prev) ? prev : list[0] ?? '')
-      })
-      .catch(() => setQueues([]))
-      .finally(() => setQueuesLoading(false))
   }, [isChatView, effectiveTenantId])
-
-  useEffect(() => {
-    if (!isChatView || !effectiveTenantId || !selectedQueueId) {
-      setPipelines([])
-      conversationPanelStore.getState().setSelectedPipelineId('')
-      return
-    }
-    setPipelinesLoading(true)
-    getQueueConfig(effectiveTenantId, selectedQueueId)
-      .then((config) => {
-        const list = pipelinesFromConfig(config)
-        setPipelines(list)
-        const prev = conversationPanelStore.getState().selectedPipelineId
-        conversationPanelStore.getState().setSelectedPipelineId(list.some((p) => p.id === prev) ? prev : list[0]?.id ?? '')
-      })
-      .catch(() => setPipelines([]))
-      .finally(() => setPipelinesLoading(false))
-  }, [isChatView, effectiveTenantId, selectedQueueId])
 
   const tools = getToolsForView(sectionId, subId, runSelected)
   const context: ToolContext = {
@@ -158,56 +113,6 @@ export function ToolsPanel({
           {isKnowledgeView && (
             <>
               <KnowledgeSourcesList />
-            </>
-          )}
-          {isChatView && (
-            <>
-              <div className="conversation-pipeline-dropdown">
-                <label className="conversation-pipeline-label" title="Workflow queue (from API)">
-                  Queue
-                </label>
-                {queuesLoading ? (
-                  <span className="conversation-pipeline-loading">Loading…</span>
-                ) : queues.length === 0 ? (
-                  <span className="conversation-pipeline-empty">No queues</span>
-                ) : (
-                  <select
-                    className="conversation-pipeline-select"
-                    value={selectedQueueId}
-                    onChange={(e) => setSelectedQueueId(e.target.value)}
-                    aria-label="Select queue"
-                  >
-                    {queues.map((q) => (
-                      <option key={q} value={q}>
-                        {queueDisplayName(q)}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-              <div className="conversation-pipeline-dropdown">
-                <label className="conversation-pipeline-label" title="Classification within the selected workflow queue">
-                  Pipeline
-                </label>
-                {pipelinesLoading ? (
-                  <span className="conversation-pipeline-loading">Loading…</span>
-                ) : pipelines.length === 0 ? (
-                  <span className="conversation-pipeline-empty">No pipelines</span>
-                ) : (
-                  <select
-                    className="conversation-pipeline-select"
-                    value={selectedPipelineId}
-                    onChange={(e) => setSelectedPipelineId(e.target.value)}
-                    aria-label="Select pipeline (within queue)"
-                  >
-                    {pipelines.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.label}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
             </>
           )}
           {sectionId === 'chat' && isChatView && (
@@ -274,7 +179,7 @@ export function ToolsPanel({
                                 setEditingSessionId(s.sessionId)
                                 setEditDraft(sessionDisplayEntries[s.sessionId]?.customTitle ?? '')
                               }}
-                              aria-label="Edit conversation name"
+                              aria-label="Edit name"
                               title="Edit name"
                             >
                               ✎
@@ -301,7 +206,7 @@ export function ToolsPanel({
                                 }
                               })
                               .finally(() => setDeletingSessionId(null))
-                            }}
+                          }}
                           disabled={deletingAll}
                           aria-label={`Delete conversation ${display.primary}`}
                           title="Delete conversation"
@@ -320,9 +225,9 @@ export function ToolsPanel({
                       if (!effectiveTenantId || deletingAll) return
                       setDeletingAll(true)
                       deleteAllSessions(effectiveTenantId, {
-                          queue: selectedQueueId ? queueDisplayName(selectedQueueId) : undefined,
-                          pipeline: selectedPipelineId || undefined,
-                        })
+                        queue: selectedQueueId ? queueDisplayName(selectedQueueId) : undefined,
+                        pipeline: selectedPipelineId || undefined,
+                      })
                         .then(() => {
                           removeSessionsDisplay(sessions.map((s) => s.sessionId))
                           setSessions([])

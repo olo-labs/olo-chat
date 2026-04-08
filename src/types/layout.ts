@@ -32,7 +32,7 @@ export const SECTIONS: SectionConfig[] = [
   {
     id: 'chat',
     label: 'Chat',
-    subtitle: 'Conversation with Olo',
+    subtitle: 'Conversation with Olo AI',
     subOptions: [
       { id: 'conversation', label: 'Conversation', description: 'Send messages and view run events' },
     ],
@@ -52,7 +52,7 @@ export const SECTIONS: SectionConfig[] = [
     label: 'Documents',
     subtitle: 'Document management',
     subOptions: [
-      { id: 'upload', label: 'Upload / manage raw files', description: 'Upload and manage raw files' },
+      { id: 'upload', label: 'Upload / Manage Raw Files', description: 'Upload, filter, and track document processing' },
     ],
   },
 ]

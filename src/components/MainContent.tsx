@@ -6,10 +6,10 @@
 import { SECTIONS, type SectionId } from '../types/layout'
 import { ChatView } from './ChatView'
 import { KnowledgeView } from './KnowledgeView'
-import { RAGUploadView } from './RAGUploadView'
+import { DocumentsUploadView } from './DocumentsUploadView'
 import type { Tenant } from '../types/tenant'
+import type { ChatProfileDto } from '../api/chatApi'
 import { queueDisplayName } from '../lib/queueDisplayName'
-import { conversationPanelStore } from '../store/conversationPanel'
 
 export interface MainContentProps {
   sectionId: SectionId | null
@@ -26,6 +26,10 @@ export interface MainContentProps {
   onDeleteTenant?: (id: string) => void
   /** When this increments, ChatView starts a new chat (from Conversation panel button). */
   newChatTrigger?: number
+  /** From GET /api/ui/context — presets (queue/pipeline) for ChatView. */
+  chatProfiles?: ChatProfileDto[]
+  /** GET /api/health; same signal as ToolsPanel offline state. */
+  backendReachable?: boolean
 }
 
 export function MainContent({
@@ -42,9 +46,10 @@ export function MainContent({
   onAddNewTenant: _onAddNewTenant,
   onDeleteTenant: _onDeleteTenant,
   newChatTrigger = 0,
+  chatProfiles = [],
+  backendReachable = false,
 }: MainContentProps) {
   const section = sectionId ? SECTIONS.find((s) => s.id === sectionId) : null
-  const selectedQueueId = conversationPanelStore((s) => s.selectedQueueId)
 
   if (!section) {
     return (
@@ -61,10 +66,15 @@ export function MainContent({
       <main className="main-content main-content-chat">
         <div className="main-content-header">
           <h1 className="main-content-title">Chat</h1>
-          <span className="main-content-subtitle"> → Conversation with Olo backend</span>
+          <span className="main-content-subtitle"> → Conversation with Olo AI</span>
         </div>
         <div className="main-content-body main-content-body-chat">
-          <ChatView tenantId={tenantId || undefined} taskQueue={selectedQueueId || undefined} newChatTrigger={newChatTrigger} />
+          <ChatView
+            tenantId={tenantId || undefined}
+            newChatTrigger={newChatTrigger}
+            chatProfiles={chatProfiles}
+            backendReachable={backendReachable}
+          />
         </div>
       </main>
     )
@@ -100,10 +110,10 @@ export function MainContent({
       </div>
       <div className="main-content-body">
         {sectionId === 'documents' && subId === 'upload' ? (
-          <RAGUploadView />
+          <DocumentsUploadView />
         ) : sectionId === 'documents' ? (
           <div className="main-content-placeholder-inner">
-            <p>Upload / manage raw files.</p>
+            <p>Upload / Manage Raw Files.</p>
           </div>
         ) : (
           <div className="main-content-placeholder-inner">

@@ -185,6 +185,12 @@
   border-radius: 6px;
   color: #e4e4e7;
   cursor: pointer;
+  color-scheme: dark;
+}
+
+.conversation-pipeline-select option {
+  background-color: #27272a;
+  color: #e4e4e7;
 }
 .conversation-pipeline-select:focus {
   outline: none;
