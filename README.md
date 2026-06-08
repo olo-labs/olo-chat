@@ -9,42 +9,42 @@ A chat interface for **Olo** — start conversations, send messages, and follow 
 
 ## For users
 
-- **Chat** — Either pick a **preset** (when the backend exposes **chat profiles** from pipeline config: name, summary, optional emoji, optional **run again** flag) or a **queue** and **pipeline** in the Conversation panel, then create a session and chat. Subtitle **Conversation with Olo AI**. While the model runs, you see **who is thinking** and a short **summary** line; message history can show **which preset** was used per turn. **Run again** (under user messages) lists other presets by **emoji + name**. Run events in the **Events** sidebar; **human** steps show **buttons** from the worker.
-- **Knowledge** — Manage knowledge sources and see status (sources, create, status).
-- **Documents** — Upload files and run RAG workflows from the UI.
+- **Chat** — Pick a **preset** (role) beside the composer: Ask, Fast, Detailed, and others from backend workflow config. Subtitle **Conversation with Olo AI**. While the model runs, you see **who is thinking** and a short **summary** line; message history shows **which preset** was used per turn. **Run again** (under user messages) lists other presets by **emoji + name**. Run events in the **Events** sidebar; **human** steps show **buttons** from the worker.
+- **Knowledge** — Manage knowledge sources and see status (placeholders).
+- **Documents** — Upload files to the backend shared storage.
 
-The app talks to the **Olo backend** for sessions, messages, and events. **Tenant** is determined by the backend (auth / context); you choose **queue** and **pipeline** in the Conversation panel.
+The app talks to the **Olo backend** for sessions, messages, and events. **Tenant** is determined by the backend; **task queue** comes from the selected preset.
 
 ## Quick start
 
-1. **Install** and **run** (ensure the Olo backend is running, e.g. on port 7080):
+1. Start the **olo backend** (port 7080), e.g. `start.bat` from the `olo` folder.
+2. From this directory:
 
    ```bash
    npm install
    npm run dev
    ```
 
-2. Open **http://localhost:3000** in your browser.
+3. Open **http://localhost:3000**.
 
-For backend setup, environment variables, Docker, and all technical details, see the **docs** below.
+For backend setup, environment variables, Docker, and technical details, see **docs** below.
 
 ## Documentation
-
-Everything technical lives in the **docs** folder:
 
 | Doc | What’s inside |
 |-----|----------------|
 | **[docs/README.md](docs/README.md)** | Overview, backend requirements, run instructions, project layout. |
-| **[docs/UI_FEATURES.md](docs/UI_FEATURES.md)** | All UI features: panels, navigation, Conversation, Events, feature flags. |
-| **[docs/CHAT_UI.md](docs/CHAT_UI.md)** | Chat in detail: APIs, queue/pipeline, run events, WebSocket. |
-| **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | Technical architecture: stack, state, API, components. |
-| **[docs/DOCKER.md](docs/DOCKER.md)** | Docker build/run, env vars, Docker Compose (dev/demo/prod), GitHub Actions, Docker Hub. |
-| **[docs/DOCKER_HUB_DESCRIPTION.md](docs/DOCKER_HUB_DESCRIPTION.md)** | Copy-paste description for the Docker Hub image page. |
+| **[docs/TECHNOLOGY_ARCHITECTURE.md](docs/TECHNOLOGY_ARCHITECTURE.md)** | Stack, architecture, design, communication. |
+| **[docs/UI_FEATURES.md](docs/UI_FEATURES.md)** | Panels, presets, Events, feature flags. |
+| **[docs/CHAT_UI.md](docs/CHAT_UI.md)** | Chat APIs, profiles, run events, WebSocket. |
+| **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | State, API layer, components, data flow. |
+| **[docs/DOCKER.md](docs/DOCKER.md)** | Docker build/run, env vars, Compose, CI. |
+| **[docs/DOCKER_HUB_DESCRIPTION.md](docs/DOCKER_HUB_DESCRIPTION.md)** | Docker Hub image description. |
 
 ## Logo and assets
 
-Logo and related assets are in **public/** (e.g. `logo-full.svg`). See project docs for usage.
+Logo and related assets are in **public/** (e.g. `logo-full.svg`).
 
 ---
 
-*For developers: requirements (Node 18+), build (`npm run build`), Storybook (`npm run storybook`), and store discipline are described in [docs/README.md](docs/README.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).*
+*Developers: Node 18+, `npm run build`, Storybook, and store discipline — [docs/README.md](docs/README.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).*

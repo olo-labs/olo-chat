@@ -17,8 +17,8 @@ Stores are scoped by **domain** (runtime, ledger, configuration, etc.), not by U
 | Store | Domain | Purpose |
 |-------|--------|---------|
 | `ui.ts` | App shell | Panels (expanded state, widths persisted), navigation (sectionId, subId, runId, tenantId), theme. **`runEventsBellUnread`** — left footer Events bell highlight when new workflow events arrived while the properties (Events) panel was closed; cleared when the panel opens. URL sync in App. |
-| `chatSessions.ts` | Chat sessions | Session list and selected session ID. Fetched for tenant + queue + pipeline; updated on create/delete (optimistic where applicable). |
-| `conversationPanel.ts` | Conversation panel | Selected queue ID and pipeline ID. Scopes session list, new session, and send message; read at action time. |
+| `chatSessions.ts` | Chat sessions | Session list and selected session ID. Fetched tenant-wide; updated on create/delete (optimistic where applicable). |
+| `conversationPanel.ts` | Conversation panel | **selectedProfileId**, **selectedQueueId**, **selectedPipelineId** from the active chat preset (`GET /api/ui/context` `chatProfiles`). Used at send time and for delete-all scoping. |
 | `runEvents.ts` | Run execution | Current run ID and run events (SSE + WebSocket). **`ChatView` subscribes to `s.events`** as the chat timeline (human card, progress). `addEvent` (**dedupes** workflow events so hydrate + replay do not duplicate), `setRun` / **`setRun(null)`**, `hydrate`, `setOnRunEventCallback`, **`setOnWorkflowEventAppended`** ( **`App`** → **`runEventsBellUnread`** for new workflow appends only). **Last 200** non-liveness events persisted to **`localStorage`** per `runId`; **`sessionStorage`** tracks last active run per chat session. Liveness (PING/PONG) stored in memory; EventsList filters. |
 | `sessionDisplay.ts` | Session display | Per-session custom title and first-message preview. Persisted (localStorage), capped 80 entries. Used for list labels and delete cleanup. |
 | `tenantConfig.ts` | Configuration (tenants) | Tenant list (from GET /api/tenants), selection, CRUD (save/update/delete), loading, “adding new”. |

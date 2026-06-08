@@ -35,10 +35,21 @@ These are the only environment variables the frontend uses. They must be set at 
 
 **Where used** — `VITE_API_BASE`, `VITE_WS_ACCESS_TOKEN`, `VITE_WS_PING_INTERVAL_SEC` in `api/chatApi.ts`, `lib/wsUrl.ts`, `hooks/useWebSocketLiveness.ts`. Upload / capability-source vars in `api/documentsUploadApi.ts` and Documents UI.
 
+### Dockerfile build args today
+
+The checked-in **`Dockerfile`** declares **ARG/ENV** only for:
+
+- `VITE_API_BASE`
+- `VITE_WS_ACCESS_TOKEN`
+- `VITE_WS_PING_INTERVAL_SEC`
+
+Upload-related `VITE_*` variables are documented above but **not** passed through the Dockerfile unless you add matching `ARG`/`ENV` lines and rebuild. For Documents upload defaults in Docker, extend the Dockerfile or set capability sources in the UI without build-time ids.
+
 ### Notes
 
 - **CORS**: The backend must allow requests from the origin where the frontend is served (e.g. the domain or port of the Docker host).
 - **Build-time only**: Vite replaces `import.meta.env.VITE_*` during `vite build`. To change these values you must rebuild the image with new build args.
+- **Chat profiles**: Not a frontend env var. The **olo backend** must serve `GET /api/ui/context` with `chatProfiles` from **`olo.configuration.dir`** (workflow JSON under e.g. `olo-mono/olo-configuration/default/`). Without that, the chat UI shows “No chat profiles configured.”
 
 ---
 

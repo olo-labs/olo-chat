@@ -18,7 +18,7 @@ function withAuth(headers: Record<string, string> = {}): Record<string, string> 
   return { ...getApiAuthHeaders(), ...headers }
 }
 
-/** Trims tenant id for URL paths and bodies (same value as {@code olo.default-tenant-id} from UI context). */
+/** Trims tenant id for URL paths and bodies (from GET /api/ui/context tenantId). */
 export function tenantIdForApiPath(tenantId: string): string {
   return tenantId?.trim() ?? ''
 }

@@ -16,7 +16,7 @@ Use the content below in Docker Hub for your image’s **Full Description**. It 
 ```markdown
 # Olo Chat (frontend)
 
-Chat UI for **Olo** — create sessions, send messages, and stream run events in real time. When the backend exposes **chat profiles**, pick a preset beside the composer; **run again** offers other presets (emoji + name) under user messages. Run events can persist locally (last 200 per run) and the UI dedupes replay after refresh. This image serves the frontend; it expects an **Olo backend** for API and WebSocket.
+Chat UI for **Olo** — create sessions, send messages, and stream run events in real time. Pick a **preset** (role) beside the composer; each preset maps to a Temporal **task queue** from backend workflow JSON (`olo.configuration.dir`). **Run again** offers other presets (emoji + name) under user messages. Run events persist locally (last 200 per run) with deduped replay after refresh. This image serves the frontend only; it requires an **Olo backend** with workflow config so `GET /api/ui/context` returns **chatProfiles**.
 
 ## Quick run
 
@@ -76,7 +76,7 @@ If Docker Hub strips the outer code block, use this version — same content, no
 
 # Olo Chat (frontend)
 
-Chat UI for **Olo** — create sessions, send messages, and stream run events in real time. When the backend exposes **chat profiles**, pick a preset beside the composer; **run again** offers other presets (emoji + name) under user messages. Run events can persist locally (last 200 per run) and the UI dedupes replay after refresh. This image serves the frontend; it expects an **Olo backend** for API and WebSocket.
+Chat UI for **Olo** — create sessions, send messages, and stream run events in real time. Pick a **preset** (role) beside the composer; each preset maps to a Temporal **task queue** from backend workflow JSON (`olo.configuration.dir`). **Run again** offers other presets (emoji + name) under user messages. Run events persist locally (last 200 per run) with deduped replay after refresh. This image serves the frontend only; it requires an **Olo backend** with workflow config so `GET /api/ui/context` returns **chatProfiles**.
 
 ## Quick run
 

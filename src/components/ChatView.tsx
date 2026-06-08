@@ -855,8 +855,9 @@ export function ChatView({
       <div className="chat-view chat-view-disconnected">
         <p>No chat profiles configured.</p>
         <p className="chat-view-hint">
-          Configure regional pipeline / Redis so <code>GET /api/ui/context</code> returns <code>chatProfiles</code>
-          (each profile needs <code>queue</code> and <code>pipeline</code>).
+          Add workflow JSON files under <code>olo.configuration.dir</code> (e.g.{' '}
+          <code>olo-mono/olo-configuration/default/*.json</code>) so{' '}
+          <code>GET /api/ui/context</code> returns <code>chatProfiles</code>.
         </p>
       </div>
     )
