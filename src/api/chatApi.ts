@@ -8,11 +8,10 @@
  * Uses VITE_API_BASE (e.g. http://localhost:7080) so requests go to BE port 7080; if unset, uses /api (Vite proxy to 7080).
  */
 
+import { getApiPathPrefix } from '../lib/apiBase'
 import { getApiAuthHeaders } from '../lib/wsUrl'
 
-const API = import.meta.env.VITE_API_BASE
-  ? `${import.meta.env.VITE_API_BASE.replace(/\/$/, '')}/api`
-  : '/api'
+const API = getApiPathPrefix()
 
 function withAuth(headers: Record<string, string> = {}): Record<string, string> {
   return { ...getApiAuthHeaders(), ...headers }

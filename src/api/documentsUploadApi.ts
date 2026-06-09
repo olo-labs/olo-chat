@@ -20,11 +20,10 @@
  * Optional `taskQueue` / `pipelineId` (from env) may start a **downstream workflow** (e.g. chunking/indexing) after persistence.
  */
 
+import { getApiPathPrefix } from '../lib/apiBase'
 import { getApiAuthHeaders } from '../lib/wsUrl'
 
-const API = import.meta.env.VITE_API_BASE
-  ? `${String(import.meta.env.VITE_API_BASE).replace(/\/$/, '')}/api`
-  : '/api'
+const API = getApiPathPrefix()
 
 const UPLOAD_QUEUE =
   (import.meta.env.VITE_RESOURCE_UPLOAD_QUEUE as string)?.trim() ||

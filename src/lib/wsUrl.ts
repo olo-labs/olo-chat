@@ -4,13 +4,20 @@
  */
 
 /**
- * WebSocket URL for the olo backend (/ws). Uses VITE_API_BASE (e.g. http://localhost:7080) → ws://localhost:7080/ws
- * Pass accessToken to validate with backend (sent as query param; backend accepts accessToken or token).
+ * WebSocket URL for the olo backend (/ws).
+ * Uses VITE_API_BASE when set; otherwise same-origin /ws (Vite or nginx proxy to the backend container).
  */
 export function getWebSocketUrl(accessToken?: string | null): string | null {
   const base = import.meta.env.VITE_API_BASE
-  if (!base || typeof base !== 'string') return null
-  const wsBase = base.trim().replace(/^http/, 'ws').replace(/\/$/, '')
+  let wsBase: string
+  if (base && typeof base === 'string' && base.trim()) {
+    wsBase = base.trim().replace(/^http/, 'ws').replace(/\/$/, '')
+  } else if (typeof window !== 'undefined' && window.location?.host) {
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    wsBase = `${proto}//${window.location.host}`
+  } else {
+    return null
+  }
   let url = `${wsBase}/ws`
   if (accessToken && accessToken.trim()) {
     url += (url.includes('?') ? '&' : '?') + 'accessToken=' + encodeURIComponent(accessToken.trim())

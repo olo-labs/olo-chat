@@ -1,13 +1,13 @@
 # Copyright (c) 2026 Olo Labs
 # SPDX-License-Identifier: Apache-2.0
 
-# Build stage: install deps and build the Vite app with env vars baked in
+# Build stage: install deps and build the Vite app.
+# Default: no VITE_API_BASE — browser uses same-origin /api and /ws; nginx proxies to OLO_BACKEND_URL.
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Build-time args (passed at docker build --build-arg or from CI). Defaults for local build.
-ARG VITE_API_BASE=http://localhost:7080
+ARG VITE_API_BASE=
 ARG VITE_WS_ACCESS_TOKEN=
 ARG VITE_WS_PING_INTERVAL_SEC=10
 
@@ -21,15 +21,19 @@ RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 COPY . .
 RUN npm run build
 
-# Production stage: serve static files with nginx
+# Production stage: nginx serves static files and proxies /api and /ws to the backend container.
 FROM nginx:alpine
 
-# Copy built assets from builder
-COPY --from=builder /app/dist /usr/share/nginx/html
+RUN apk add --no-cache gettext
 
-# SPA: serve index.html for client-side routes
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 EXPOSE 80
 
+ENV OLO_BACKEND_URL=http://olo:7080
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]

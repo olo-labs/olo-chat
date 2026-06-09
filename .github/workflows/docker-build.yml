@@ -4,6 +4,7 @@
 # Build and push olo-chat to Docker Hub (+ GHCR)
 # Repo secrets: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN
 # Pull: docker pull <DOCKERHUB_USERNAME>/olo-chat:<library-version>  e.g. docker pull ololab/olo-chat:1.0.0
+# Also publishes :latest on every push (e.g. docker pull ololab/olo-chat:latest)
 name: Publish Docker image
 
 on:
@@ -80,6 +81,7 @@ jobs:
           images: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=${{ steps.version.outputs.id }}
+            type=raw,value=latest
 
       - name: Docker metadata (GHCR)
         if: github.event_name != 'workflow_dispatch' || github.event.inputs.push
@@ -89,6 +91,7 @@ jobs:
           images: ${{ env.GHCR_REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=${{ steps.version.outputs.id }}
+            type=raw,value=latest
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -100,7 +103,7 @@ jobs:
             ${{ steps.meta-ghcr.outputs.tags }}
           labels: ${{ steps.meta-dockerhub.outputs.labels }}
           build-args: |
-            VITE_API_BASE=${{ vars.VITE_API_BASE || 'http://localhost:7080' }}
+            VITE_API_BASE=${{ vars.VITE_API_BASE || '' }}
             VITE_WS_ACCESS_TOKEN=${{ secrets.VITE_WS_ACCESS_TOKEN }}
             VITE_WS_PING_INTERVAL_SEC=${{ vars.VITE_WS_PING_INTERVAL_SEC || '10' }}
           cache-from: type=gha

@@ -1,8 +1,7 @@
 # Copyright (c) 2026 Olo Labs
 # SPDX-License-Identifier: Apache-2.0
 
-# Production: frontend with build args from env. Set VITE_API_BASE (and optionally
-# VITE_WS_ACCESS_TOKEN, VITE_WS_PING_INTERVAL_SEC) in .env or export before running.
+# Production: frontend proxies to the olo backend container (same Docker network).
 # Usage: docker compose -f docker-compose.prod.yml up --build -d
 
 services:
@@ -10,10 +9,15 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        VITE_API_BASE: ${VITE_API_BASE:?Set VITE_API_BASE in .env or environment}
-        VITE_WS_ACCESS_TOKEN: ${VITE_WS_ACCESS_TOKEN:-}
-        VITE_WS_PING_INTERVAL_SEC: ${VITE_WS_PING_INTERVAL_SEC:-10}
+    environment:
+      OLO_BACKEND_URL: ${OLO_BACKEND_URL:-http://olo:7080}
     ports:
       - "80:80"
     restart: unless-stopped
+    networks:
+      - olo-net
+
+networks:
+  olo-net:
+    external: true
+    name: olo-net

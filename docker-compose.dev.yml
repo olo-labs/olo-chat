@@ -1,20 +1,23 @@
 # Copyright (c) 2026 Olo Labs
 # SPDX-License-Identifier: Apache-2.0
 
-# Development: frontend only. Backend at http://olo:7080 (Docker service name; use when chat runs in same stack).
+# Development: frontend container proxies /api and /ws to the olo backend service on olo-net.
 # Usage: docker compose -f docker-compose.dev.yml up --build
-# Open http://localhost:3000; the app calls the API at http://olo:7080 (baked in at build).
+# Open http://localhost:3000
 
 services:
   frontend:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        VITE_API_BASE: http://olo:7080
-        VITE_WS_ACCESS_TOKEN: ""
-        VITE_WS_PING_INTERVAL_SEC: "10"
+    environment:
+      OLO_BACKEND_URL: ${OLO_BACKEND_URL:-http://olo:7080}
     ports:
       - "3000:80"
-    # Optional: use host network so container shares host's localhost (Linux only)
-    # network_mode: host
+    networks:
+      - olo-net
+
+networks:
+  olo-net:
+    external: true
+    name: olo-net
