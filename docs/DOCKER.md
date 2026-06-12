@@ -49,7 +49,7 @@ Upload-related `VITE_*` variables are documented above but **not** passed throug
 
 - **CORS**: The backend must allow requests from the origin where the frontend is served (e.g. the domain or port of the Docker host).
 - **Build-time only**: Vite replaces `import.meta.env.VITE_*` during `vite build`. To change these values you must rebuild the image with new build args.
-- **Chat profiles**: Not a frontend env var. The **olo backend** must serve `GET /api/ui/context` with `chatProfiles` from **`olo.configuration.dir`** (workflow JSON under e.g. `olo-mono/olo-configuration/default/`). Without that, the chat UI shows “No chat profiles configured.”
+- **Chat profiles**: Not a frontend env var. The **olo backend** must serve `GET /api/ui/context` with `chatProfiles` from **`olo.configuration.dir`** (workflow JSON under e.g. `olo-mono/olo-definition/olo-configuration/default/`). Without that, the chat UI shows “No chat profiles configured.”
 
 ---
 

@@ -47,7 +47,10 @@ export function EventsList() {
         {displayEvents.map((ev, i) => {
           const isExpanded = expandedId === i
           return (
-            <li key={i} className={`events-list-item events-list-item-${(ev.nodeType ?? '').toLowerCase()}`}>
+            <li
+              key={`${ev.runId ?? 'run'}-${ev.sequenceNumber ?? i}-${ev.nodeId ?? 'node'}`}
+              className={`events-list-item events-list-item-${(ev.nodeType ?? '').toLowerCase()}`}
+            >
               <button
                 type="button"
                 className="events-list-item-head"

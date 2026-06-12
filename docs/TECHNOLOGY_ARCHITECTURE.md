@@ -48,7 +48,7 @@ Static SPA after `npm run build`; dynamic data from the **olo** backend.
 ```
 
 - No workflow execution logic in the browser.
-- **Chat profiles** come from backend filesystem config (`olo-mono/olo-configuration`), not frontend JSON or Redis.
+- **Chat profiles** come from backend filesystem config (`olo-mono/olo-definition/olo-configuration`), not frontend JSON or Redis.
 
 ### 2.2 Module boundaries
 

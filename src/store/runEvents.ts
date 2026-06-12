@@ -16,8 +16,15 @@ export function getActiveRunStorageKey(sessionId: string): string {
   return `olo:chat-active-run:${sessionId}`
 }
 
-function isLivenessEvent(e: RunEventDto): boolean {
+export function isLivenessEvent(e: RunEventDto): boolean {
   return (e.nodeType ?? '').toLowerCase() === 'liveness'
+}
+
+/** Workflow events for a single run id (excludes liveness). */
+export function eventsForRun(events: RunEventDto[], runId: string | null | undefined): RunEventDto[] {
+  const id = runId?.trim()
+  if (!id) return []
+  return events.filter((e) => (e.runId ?? '').trim() === id && !isLivenessEvent(e))
 }
 
 /**
@@ -101,7 +108,8 @@ export const runEventsStore = create<RunEventsState>((set) => ({
   runId: null,
   events: [],
 
-  setRun: (runId) => set({ runId, events: [] }),
+  /** Updates active run id without clearing accumulated session events. */
+  setRun: (runId) => set({ runId }),
 
   addEvent: (event) => {
     let appended = false
@@ -115,10 +123,9 @@ export const runEventsStore = create<RunEventsState>((set) => ({
       }
       appended = true
       const next = [...s.events, event]
-      const persistRunId =
-        s.runId ?? (event.runId && event.runId !== '__liveness__' ? event.runId : null)
-      if (persistRunId) {
-        persistWorkflowEventsForRun(persistRunId, next)
+      const persistRunId = (event.runId ?? '').trim()
+      if (persistRunId && persistRunId !== '__liveness__') {
+        persistWorkflowEventsForRun(persistRunId, eventsForRun(next, persistRunId))
       }
       return { events: next }
     })

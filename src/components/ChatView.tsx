@@ -18,7 +18,9 @@ import {
   type RunEventDto,
 } from '../api/chatApi'
 import {
+  eventsForRun,
   getActiveRunStorageKey,
+  isLivenessEvent,
   loadPersistedRunEvents,
   RUN_EVENTS_PERSIST_MAX,
   runEventsStore,
@@ -250,7 +252,7 @@ export function ChatView({
   const [input, setInput] = useState('')
   /** Single source of truth with WebSocket (`useWebSocketLiveness` only updates the store). Local state was stale after refresh. */
   const runEvents = runEventsStore((s) => s.events)
-  const [, setActiveRunId] = useState<string | null>(null)
+  const [activeRunId, setActiveRunId] = useState<string | null>(null)
   /** Set when run completes/fails from API poll (so we show fallback message even if SSE didn't deliver SYSTEM event) */
   const [runCompletedFromPoll, setRunCompletedFromPoll] = useState(false)
   /** Current response from GET /api/runs/{runId}/response — queried when we receive events or poll while in progress */
@@ -394,6 +396,7 @@ export function ChatView({
     setLoading(true)
     setRunCompletedFromPoll(false)
     setQueriedResponse(null)
+    setActiveRunId(null)
     runEventsStore.getState().clear()
     unsubscribeRunRef.current?.()
     listMessages(sessionId)
@@ -417,6 +420,7 @@ export function ChatView({
     }
     runEventsStore.getState().hydrate(rid, persisted)
     lastOutboundRunIdRef.current = rid
+    setActiveRunId(rid)
 
     const onRestoredRunEvent = (eventRid: string, ev: RunEventDto) => {
       getRunResponse(eventRid).then((r) => {
@@ -459,6 +463,7 @@ export function ChatView({
     setError(null)
     setRunCompletedFromPoll(false)
     setQueriedResponse(null)
+    setActiveRunId(null)
     runEventsStore.getState().clear()
     unsubscribeRunRef.current?.()
     createSession(tenantId, {})
@@ -491,7 +496,7 @@ export function ChatView({
     setInput('')
     setSending(true)
     setError(null)
-    runEventsStore.getState().setRun(null)
+    setActiveRunId(null)
     setRunCompletedFromPoll(false)
     setQueriedResponse(null)
     // Show user message in main panel immediately (align with previous behavior)
@@ -582,7 +587,7 @@ export function ChatView({
       const { selectedQueueId: q } = conversationPanelStore.getState()
       setSending(true)
       setError(null)
-      runEventsStore.getState().setRun(null)
+      setActiveRunId(null)
       setRunCompletedFromPoll(false)
       setQueriedResponse(null)
       sendMessage(sessionId, content.trim(), {
@@ -660,12 +665,17 @@ export function ChatView({
     [chatProfiles, setSelectedProfileId, setSelectedQueueId, setSelectedPipelineId, handleResend]
   )
 
+  const currentRunEvents = useMemo(
+    () => eventsForRun(runEvents, activeRunId),
+    [runEvents, activeRunId]
+  )
+
   const humanWaitingRefetchKey = useMemo(() => {
-    const w = [...runEvents]
+    const w = [...currentRunEvents]
       .reverse()
       .find((e) => e.nodeType?.toUpperCase() === 'HUMAN' && e.status?.toUpperCase() === 'WAITING')
     return w ? `${w.sequenceNumber ?? 0}:${w.nodeId ?? ''}` : ''
-  }, [runEvents])
+  }, [currentRunEvents])
 
   useEffect(() => {
     if (!sessionId || !humanWaitingRefetchKey) return
@@ -680,14 +690,14 @@ export function ChatView({
 
   // Re-enable Send and Resend when workflow completes: MODEL COMPLETED with output, or SYSTEM COMPLETED/FAILED (from Temporal)
   useEffect(() => {
-    if (!sending) return
-    const summary = runEvents.map((e) => ({
+    if (!sending || !activeRunId) return
+    const summary = currentRunEvents.map((e) => ({
       nodeType: e.nodeType,
       status: e.status,
       hasOutput: e.output != null,
       match: e.nodeType?.toUpperCase() === 'MODEL' && (e.status?.toUpperCase() === 'COMPLETED' || e.status) && e.output != null,
     }))
-    const hasWorkflowComplete = runEvents.some(
+    const hasWorkflowComplete = currentRunEvents.some(
       (e) =>
         (e.nodeType?.toUpperCase() === 'MODEL' &&
           (e.status?.toUpperCase() === 'COMPLETED' || e.status) &&
@@ -696,7 +706,7 @@ export function ChatView({
           (e.status?.toUpperCase() === 'COMPLETED' || e.status?.toUpperCase() === 'FAILED'))
     )
     console.log('[Chat] G. workflow-complete check', {
-      runEventsCount: runEvents.length,
+      runEventsCount: currentRunEvents.length,
       summary,
       hasWorkflowComplete,
     })
@@ -704,23 +714,23 @@ export function ChatView({
       console.log('[Chat] H. setSending(false) — workflow complete')
       setSending(false)
     }
-  }, [sending, runEvents])
+  }, [sending, activeRunId, currentRunEvents])
 
-  const lastModelOutput = runEvents
+  const lastModelOutput = currentRunEvents
     .filter(
       (e) =>
         (e.nodeType?.toUpperCase() === 'MODEL' && e.status?.toUpperCase() === 'COMPLETED' && e.output) ||
         (e.nodeType?.toUpperCase() === 'MODEL' && e.output)
     )
     .pop()
-  const lastSystemCompleted = runEvents
+  const lastSystemCompleted = currentRunEvents
     .filter(
       (e) => e.nodeType?.toUpperCase() === 'SYSTEM' && e.status?.toUpperCase() === 'COMPLETED' && e.output
     )
     .pop()
   const assistantTextFromModel = lastModelOutput ? extractAssistantText(lastModelOutput.output) : null
   const assistantTextFromSystem = lastSystemCompleted ? extractAssistantText(lastSystemCompleted.output) : null
-  const hasSystemCompleted = runEvents.some(
+  const hasSystemCompleted = currentRunEvents.some(
     (e) => e.nodeType?.toUpperCase() === 'SYSTEM' && e.status?.toUpperCase() === 'COMPLETED'
   )
   // Show reply: queried from API (on event or poll), or from events, or fallback when completed with no text
@@ -732,9 +742,7 @@ export function ChatView({
   // Don't show the inline assistant block if the last message is already assistant (from listMessages refetch) — avoids duplicate
   const lastMessageIsAssistant = messages.length > 0 && messages[messages.length - 1].role === 'assistant'
   const showInlineAssistant = displayAssistantText && !lastMessageIsAssistant
-  const progressEvents = runEvents
-    .filter((e) => (e.nodeType ?? '').toUpperCase() !== 'LIVENESS')
-    .slice(-RUN_EVENTS_PERSIST_MAX)
+  const progressEvents = runEvents.filter((e) => !isLivenessEvent(e)).slice(-RUN_EVENTS_PERSIST_MAX)
 
   useEffect(() => {
     try {
@@ -856,7 +864,7 @@ export function ChatView({
         <p>No chat profiles configured.</p>
         <p className="chat-view-hint">
           Add workflow JSON files under <code>olo.configuration.dir</code> (e.g.{' '}
-          <code>olo-mono/olo-configuration/default/*.json</code>) so{' '}
+          <code>olo-mono/olo-definition/olo-configuration/default/*.json</code>) so{' '}
           <code>GET /api/ui/context</code> returns <code>chatProfiles</code>.
         </p>
       </div>
@@ -1217,7 +1225,7 @@ export function ChatView({
                   const outputSummary = summarizeMap(ev.output)
                   return (
                     <div
-                      key={`${ev.sequenceNumber ?? i}-${ev.nodeId ?? 'node'}`}
+                      key={`${ev.runId ?? 'run'}-${ev.sequenceNumber ?? i}-${ev.nodeId ?? 'node'}`}
                       className={`chat-view-progress-line chat-view-event-${(ev.nodeType ?? 'system').toLowerCase()}`}
                     >
                       <span className="chat-view-progress-head">
