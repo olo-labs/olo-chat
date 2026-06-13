@@ -30,7 +30,7 @@ The backend is the single source of truth. Chat **requires** `chatProfiles` from
 Workflow JSON files live under **`olo.configuration.dir`**, e.g.:
 
 ```
-olo-mono/olo-definition/olo-configuration/default/
+olo-mono/olo-definition/olo-configuration/current-active/
   ask.json
   fast.json
   detailed.json

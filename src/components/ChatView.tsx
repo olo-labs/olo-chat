@@ -864,7 +864,7 @@ export function ChatView({
         <p>No chat profiles configured.</p>
         <p className="chat-view-hint">
           Add workflow JSON files under <code>olo.configuration.dir</code> (e.g.{' '}
-          <code>olo-mono/olo-definition/olo-configuration/default/*.json</code>) so{' '}
+          <code>olo-mono/olo-definition/olo-configuration/current-active/*.json</code>) so{' '}
           <code>GET /api/ui/context</code> returns <code>chatProfiles</code>.
         </p>
       </div>

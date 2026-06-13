@@ -34,7 +34,7 @@ Frontend for the **Olo** chat flow. It provides a chat UI that talks to the **ol
 
 The chat UI **requires** `chatProfiles` from **`GET /api/ui/context`**. There is no legacy Queue/Pipeline picker.
 
-- **Source** — Backend scans **`olo.configuration.dir`** (e.g. `olo-mono/olo-definition/olo-configuration/default/*.json`). Each file is a `WorkflowDefinition`; the backend maps fields to `ChatProfileDto`:
+- **Source** — Backend scans **`olo.configuration.dir`** (e.g. `olo-mono/olo-definition/olo-configuration/current-active/*.json`). Each file is a `WorkflowDefinition`; the backend maps fields to `ChatProfileDto`:
   - `role` → `displayName`
   - `shortDescription` → `displaySummary`
   - `emoji`, `queue`, `id` → `pipeline`
@@ -57,7 +57,7 @@ The app defaults to **Chat → Conversation** and uses the **olo** backend as th
 | Repo path | Role |
 |-----------|------|
 | **olo** | Chat backend (Spring Boot). REST + SSE at `/api`. Default port **7080**. Start with `start.bat` or `./gradlew bootRun`. |
-| **olo-mono/olo-definition/olo-configuration** | Regional workflow JSON (e.g. `default/ask.json`, `fast.json`). Drives chat profiles and Temporal task queues. |
+| **olo-mono/olo-definition/olo-configuration** | Active workflow JSON in `current-active/` (e.g. copied from `default/ask.json`). Drives chat profiles and Temporal task queues. |
 | **olo-chat** | This frontend (Vite + React). Proxies `/api` to the backend in development. |
 
 **Relevant backend docs:**
@@ -82,7 +82,7 @@ The app defaults to **Chat → Conversation** and uses the **olo** backend as th
    ```
    Dev server: **http://localhost:3000**. Set `VITE_API_BASE=http://localhost:7080` in `.env.development`.
 
-3. Open **http://localhost:3000**. Choose a **preset** next to the composer. If no presets appear, add workflow JSON under `olo-mono/olo-definition/olo-configuration/default/` and restart the backend.
+3. Open **http://localhost:3000**. Choose a **preset** next to the composer. If no presets appear, add workflow JSON under `olo-mono/olo-definition/olo-configuration/current-active/` and restart the backend.
 
 ---
 
