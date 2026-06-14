@@ -14,6 +14,7 @@ function workflowEvent(runId: string, sequenceNumber: number): RunEventDto {
     nodeType: 'SYSTEM',
     status: 'COMPLETED',
     nodeId: 'end',
+    parentNodeId: null,
     timestamp: sequenceNumber,
   }
 }

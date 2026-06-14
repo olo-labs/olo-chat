@@ -16,4 +16,4 @@ if !FOUND!==0 (
   echo Chat UI stopped.
 )
 echo.
-pause
+if not defined NONINTERACTIVE pause
