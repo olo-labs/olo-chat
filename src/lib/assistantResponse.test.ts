@@ -1,0 +1,119 @@
+import { describe, expect, it } from 'vitest'
+import {
+  EMPTY_RESPONSE_MESSAGE,
+  fallbackResponseMessage,
+  isRunTerminalFromApi,
+  isWorkflowFinished,
+  normalizeResponseText,
+  pickResponseFromEvents,
+  resolvePersistedAssistantContent,
+} from './assistantResponse'
+import type { RunEventDto } from '../api/chatApi'
+
+describe('pickResponseFromEvents', () => {
+  it('prefers WORKFLOW_RESULT over later empty temporal SYSTEM event', () => {
+    const events: RunEventDto[] = [
+      {
+        runId: 'r1',
+        nodeId: 'kernel',
+        nodeType: 'SYSTEM',
+        status: 'COMPLETED',
+        timestamp: 1,
+        output: { status: 'WORKFLOW_RESULT', response: 'workflow answer' },
+        metadata: { phase: 'kernel-result' },
+      },
+      {
+        runId: 'r1',
+        nodeId: 'root',
+        nodeType: 'SYSTEM',
+        status: 'COMPLETED',
+        timestamp: 2,
+        output: { source: 'temporal' },
+      },
+    ]
+    expect(pickResponseFromEvents(events)).toBe('workflow answer')
+  })
+})
+
+describe('normalizeResponseText', () => {
+  it('returns null for metadata-only json', () => {
+    expect(normalizeResponseText('{"source":"temporal"}')).toBeNull()
+    expect(normalizeResponseText('hello')).toBe('hello')
+  })
+})
+
+describe('isWorkflowFinished', () => {
+  it('ignores CONTEXT_READY-only completion', () => {
+    const events: RunEventDto[] = [
+      {
+        runId: 'r1',
+        nodeId: 'kernel',
+        nodeType: 'SYSTEM',
+        status: 'COMPLETED',
+        timestamp: 1,
+        output: { status: 'CONTEXT_READY', queue: 'agent' },
+      },
+    ]
+    expect(isWorkflowFinished(events)).toBe(false)
+  })
+
+  it('detects WORKFLOW_RESULT completion', () => {
+    const events: RunEventDto[] = [
+      {
+        runId: 'r1',
+        nodeId: 'kernel',
+        nodeType: 'SYSTEM',
+        status: 'COMPLETED',
+        timestamp: 1,
+        output: { status: 'WORKFLOW_RESULT', response: 'done' },
+      },
+    ]
+    expect(isWorkflowFinished(events)).toBe(true)
+  })
+})
+
+describe('isRunTerminalFromApi', () => {
+  it('ignores completed status after CONTEXT_READY only', () => {
+    const events: RunEventDto[] = [
+      {
+        runId: 'r1',
+        nodeId: 'kernel',
+        nodeType: 'SYSTEM',
+        status: 'COMPLETED',
+        timestamp: 1,
+        output: { status: 'CONTEXT_READY' },
+      },
+    ]
+    expect(isRunTerminalFromApi('completed', events)).toBe(false)
+    expect(isRunTerminalFromApi('completed', [
+      ...events,
+      {
+        runId: 'r1',
+        nodeId: 'kernel',
+        nodeType: 'SYSTEM',
+        status: 'COMPLETED',
+        timestamp: 2,
+        output: { status: 'WORKFLOW_RESULT', response: 'ok' },
+      },
+    ])).toBe(true)
+  })
+})
+
+describe('resolvePersistedAssistantContent', () => {
+  it('returns null for empty assistant while run is in progress', () => {
+    expect(
+      resolvePersistedAssistantContent('', {
+        runId: 'r1',
+        activeRunId: 'r1',
+        sending: true,
+        events: [],
+      }),
+    ).toBeNull()
+  })
+})
+
+describe('fallbackResponseMessage', () => {
+  it('uses chat empty copy only when terminal', () => {
+    expect(fallbackResponseMessage('completed')).toBe(EMPTY_RESPONSE_MESSAGE)
+  })
+})

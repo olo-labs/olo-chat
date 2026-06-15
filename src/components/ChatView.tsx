@@ -30,6 +30,14 @@ import { conversationPanelStore } from '../store/conversationPanel'
 import { sessionDisplayStore } from '../store/sessionDisplay'
 import { queueDisplayName } from '../lib/queueDisplayName'
 import { emojiForProfile, formatProfileOptionLabel } from '../lib/chatProfileUi'
+import {
+  fallbackResponseMessage,
+  isRunTerminalFromApi,
+  isWorkflowFinished,
+  normalizeResponseText,
+  pickResponseFromEvents,
+  resolvePersistedAssistantContent,
+} from '../lib/assistantResponse'
 import { getCurrentSocket, subscribeToRun } from '../lib/wsSingleton'
 
 const profileByRunStorageKey = (sid: string) => `olo:chat-run-profiles:${sid}`
@@ -62,59 +70,6 @@ function readStoredProgressHeight(): number {
     /* ignore */
   }
   return CHAT_PROGRESS_HEIGHT_DEFAULT
-}
-
-/** Extract assistant reply text from MODEL node output; supports content, text, message, and nested shapes. */
-function extractAssistantText(output: unknown): string | null {
-  if (output == null) return null
-  if (typeof output === 'string') return output.trim() || null
-  if (typeof output !== 'object') return null
-  const o = output as Record<string, unknown>
-  const content = o.content
-  if (typeof content === 'string' && content.trim()) return content.trim()
-  const text = o.text
-  if (typeof text === 'string' && text.trim()) return text.trim()
-  const message = o.message
-  if (message != null && typeof message === 'object') {
-    const m = message as Record<string, unknown>
-    const mc = m.content
-    if (typeof mc === 'string' && mc.trim()) return mc.trim()
-  }
-  const choices = o.choices
-  if (Array.isArray(choices) && choices.length > 0) {
-    const first = choices[0] as Record<string, unknown> | undefined
-    const msg = first?.message as Record<string, unknown> | undefined
-    const c = msg?.content
-    if (typeof c === 'string' && c.trim()) return c.trim()
-  }
-  const result = o.result
-  if (typeof result === 'string' && result.trim()) return result.trim()
-  const response = o.response
-  if (typeof response === 'string' && response.trim()) return response.trim()
-  if (Object.keys(o).length > 0) return JSON.stringify(output)
-  return null
-}
-
-/** Shown when assistant has no real response (empty or metadata-only e.g. {"source":"temporal"}). */
-const EMPTY_RESPONSE_MESSAGE = 'Apologise, Couldn\'t generate the response for your query.'
-
-function formatAssistantContent(content: string | null | undefined): string {
-  const t = content?.trim()
-  if (!t) return EMPTY_RESPONSE_MESSAGE
-  if (t.startsWith('{') && t.endsWith('}')) {
-    try {
-      const o = JSON.parse(t) as Record<string, unknown>
-      if (typeof o === 'object' && o !== null) {
-        const hasContent = [o.content, o.text, o.message].some(
-          (v) => typeof v === 'string' && v.trim().length > 0
-        )
-        if (!hasContent) return EMPTY_RESPONSE_MESSAGE
-      }
-    } catch {
-      // not valid JSON, show as-is
-    }
-  }
-  return t
 }
 
 /** Older human-step assistant lines may contain a lone `<Options>` line and extra newlines; strip for display. */
@@ -279,6 +234,26 @@ export function ChatView({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [])
 
+  const handleRunEvent = useCallback(
+    (rid: string, _ev: RunEventDto) => {
+      if (!sessionId) return
+      getRunResponse(rid).then((r) => {
+        if (r?.response?.trim()) setQueriedResponse(r.response.trim())
+      })
+      const events = eventsForRun(runEventsStore.getState().events, rid)
+      getRun(rid).then((run) => {
+        if (!run || !isRunTerminalFromApi(run.status, events)) return
+        setRunCompletedFromPoll(true)
+        setSending(false)
+        listMessages(sessionId).then(setMessages).catch(() => {})
+      })
+      if (isWorkflowFinished(events)) {
+        listMessages(sessionId).then(setMessages).catch(() => {})
+      }
+    },
+    [sessionId],
+  )
+
   useLayoutEffect(() => {
     if (chatProfiles.length === 0) return
     const validIds = new Set(chatProfiles.map((p) => p.id))
@@ -423,19 +398,7 @@ export function ChatView({
     setActiveRunId(rid)
 
     const onRestoredRunEvent = (eventRid: string, ev: RunEventDto) => {
-      getRunResponse(eventRid).then((r) => {
-        if (r?.response?.trim()) setQueriedResponse(r.response.trim())
-      })
-      getRun(eventRid).then((run) => {
-        if (run && (run.status === 'completed' || run.status === 'failed')) {
-          setRunCompletedFromPoll(true)
-          setSending(false)
-          listMessages(sessionId).then(setMessages).catch(() => {})
-        }
-      })
-      if (ev.nodeType?.toUpperCase() === 'SYSTEM' && ev.status?.toUpperCase() === 'COMPLETED') {
-        listMessages(sessionId).then(setMessages).catch(() => {})
-      }
+      handleRunEvent(eventRid, ev)
     }
     runEventsStore.getState().setOnRunEventCallback(onRestoredRunEvent)
 
@@ -443,7 +406,7 @@ export function ChatView({
       subscribeToRun(rid)
     }
     shouldTryRestoreRunEventsRef.current = false
-  }, [sessionId, loading])
+  }, [sessionId, loading, handleRunEvent])
 
   // Auto-set first message preview for session list (so Conversation panel shows a useful label)
   useEffect(() => {
@@ -539,19 +502,7 @@ export function ChatView({
         unsubscribeRunRef.current?.()
 
         const onEvent = (rid: string, ev: RunEventDto) => {
-          getRunResponse(rid).then((r) => {
-            if (r?.response?.trim()) setQueriedResponse(r.response.trim())
-          })
-          getRun(rid).then((run) => {
-            if (run && (run.status === 'completed' || run.status === 'failed')) {
-              setRunCompletedFromPoll(true)
-              setSending(false)
-              listMessages(sessionId).then(setMessages).catch(() => {})
-            }
-          })
-          if (ev.nodeType?.toUpperCase() === 'SYSTEM' && ev.status?.toUpperCase() === 'COMPLETED') {
-            listMessages(sessionId).then(setMessages).catch(() => {})
-          }
+          handleRunEvent(rid, ev)
         }
         runEventsStore.getState().setOnRunEventCallback(onEvent)
 
@@ -579,7 +530,7 @@ export function ChatView({
         setError(String(e.message))
         setSending(false)
       })
-  }, [input, sessionId, sending, fetchSessions, recordProfileForRun])
+  }, [input, sessionId, sending, fetchSessions, recordProfileForRun, handleRunEvent])
 
   const handleResend = useCallback(
     (content: string) => {
@@ -609,19 +560,7 @@ export function ChatView({
           unsubscribeRunRef.current?.()
 
           const onEvent = (rid: string, ev: RunEventDto) => {
-            getRunResponse(rid).then((r) => {
-              if (r?.response?.trim()) setQueriedResponse(r.response.trim())
-            })
-            getRun(rid).then((run) => {
-              if (run && (run.status === 'completed' || run.status === 'failed')) {
-                setRunCompletedFromPoll(true)
-                setSending(false)
-                listMessages(sessionId).then(setMessages).catch(() => {})
-              }
-            })
-            if (ev.nodeType?.toUpperCase() === 'SYSTEM' && ev.status?.toUpperCase() === 'COMPLETED') {
-              listMessages(sessionId).then(setMessages).catch(() => {})
-            }
+            handleRunEvent(rid, ev)
           }
           runEventsStore.getState().setOnRunEventCallback(onEvent)
 
@@ -650,7 +589,7 @@ export function ChatView({
           setSending(false)
         })
     },
-    [sessionId, sending, fetchSessions, recordProfileForRun]
+    [sessionId, sending, fetchSessions, recordProfileForRun, handleRunEvent]
   )
 
   const handleResendWithProfile = useCallback(
@@ -697,14 +636,7 @@ export function ChatView({
       hasOutput: e.output != null,
       match: e.nodeType?.toUpperCase() === 'MODEL' && (e.status?.toUpperCase() === 'COMPLETED' || e.status) && e.output != null,
     }))
-    const hasWorkflowComplete = currentRunEvents.some(
-      (e) =>
-        (e.nodeType?.toUpperCase() === 'MODEL' &&
-          (e.status?.toUpperCase() === 'COMPLETED' || e.status) &&
-          e.output != null) ||
-        (e.nodeType?.toUpperCase() === 'SYSTEM' &&
-          (e.status?.toUpperCase() === 'COMPLETED' || e.status?.toUpperCase() === 'FAILED'))
-    )
+    const hasWorkflowComplete = isWorkflowFinished(currentRunEvents)
     console.log('[Chat] G. workflow-complete check', {
       runEventsCount: currentRunEvents.length,
       summary,
@@ -716,32 +648,34 @@ export function ChatView({
     }
   }, [sending, activeRunId, currentRunEvents])
 
-  const lastModelOutput = currentRunEvents
-    .filter(
-      (e) =>
-        (e.nodeType?.toUpperCase() === 'MODEL' && e.status?.toUpperCase() === 'COMPLETED' && e.output) ||
-        (e.nodeType?.toUpperCase() === 'MODEL' && e.output)
-    )
-    .pop()
-  const lastSystemCompleted = currentRunEvents
-    .filter(
-      (e) => e.nodeType?.toUpperCase() === 'SYSTEM' && e.status?.toUpperCase() === 'COMPLETED' && e.output
-    )
-    .pop()
-  const assistantTextFromModel = lastModelOutput ? extractAssistantText(lastModelOutput.output) : null
-  const assistantTextFromSystem = lastSystemCompleted ? extractAssistantText(lastSystemCompleted.output) : null
-  const hasSystemCompleted = currentRunEvents.some(
-    (e) => e.nodeType?.toUpperCase() === 'SYSTEM' && e.status?.toUpperCase() === 'COMPLETED'
+  const runFailed = currentRunEvents.some(
+    (e) => e.nodeType?.toUpperCase() === 'SYSTEM' && e.status?.toUpperCase() === 'FAILED',
   )
-  // Show reply: queried from API (on event or poll), or from events, or fallback when completed with no text
-  const displayAssistantText =
-    (queriedResponse?.trim() || null) ??
-    assistantTextFromModel ??
-    assistantTextFromSystem ??
-    (hasSystemCompleted || runCompletedFromPoll ? 'Response received.' : null)
-  // Don't show the inline assistant block if the last message is already assistant (from listMessages refetch) — avoids duplicate
-  const lastMessageIsAssistant = messages.length > 0 && messages[messages.length - 1].role === 'assistant'
-  const showInlineAssistant = displayAssistantText && !lastMessageIsAssistant
+  const runTerminal = runCompletedFromPoll || (!sending && isWorkflowFinished(currentRunEvents))
+  const workflowReturnText =
+    normalizeResponseText(queriedResponse) ??
+    normalizeResponseText(pickResponseFromEvents(currentRunEvents))
+  const inlineAssistantText =
+    workflowReturnText ??
+    (runTerminal && !sending ? fallbackResponseMessage(runFailed ? 'failed' : 'completed') : null)
+
+  const assistantMessageContext = {
+    activeRunId,
+    sending,
+    events: currentRunEvents,
+  }
+
+  const resolveAssistantBubbleText = (m: ChatMessageDto): string | null =>
+    resolvePersistedAssistantContent(normalizeHumanStepHistoryContent(m.content), {
+      ...assistantMessageContext,
+      runId: m.runId,
+      events: m.runId ? eventsForRun(runEvents, m.runId) : currentRunEvents,
+    })
+
+  const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null
+  const lastMessageIsAssistant =
+    lastMsg?.role === 'assistant' && resolveAssistantBubbleText(lastMsg) != null
+  const showInlineAssistant = inlineAssistantText != null && !lastMessageIsAssistant
   const progressEvents = runEvents.filter((e) => !isLivenessEvent(e)).slice(-RUN_EVENTS_PERSIST_MAX)
 
   useEffect(() => {
@@ -904,6 +838,11 @@ export function ChatView({
                 m.role === 'user' && !isHumanStepReplyMessage(messages, index) && runAgainProfiles.length > 0
                   ? runAgainProfiles.filter((p) => p.id !== usedProfileId)
                   : []
+              const assistantText =
+                m.role === 'assistant' ? resolveAssistantBubbleText(m) : null
+              if (m.role === 'assistant' && assistantText == null) {
+                return null
+              }
               return (
                 <div key={m.messageId} className={`chat-view-message-wrap chat-view-message-wrap-${m.role}`}>
                   <div className={`chat-view-message chat-view-message-${m.role}`}>
@@ -933,9 +872,7 @@ export function ChatView({
                       )}
                     </div>
                     <div className="chat-view-message-content">
-                      {m.role === 'assistant'
-                        ? formatAssistantContent(normalizeHumanStepHistoryContent(m.content))
-                        : m.content}
+                      {m.role === 'assistant' ? assistantText : m.content}
                     </div>
                     {m.role === 'user' && runAgainTargets.length > 0 && (
                       <div className="chat-view-msg-runagain-wrap">
@@ -1006,7 +943,7 @@ export function ChatView({
                     </div>
                   </div>
                   <div className="chat-view-message-content">
-                    {formatAssistantContent(normalizeHumanStepHistoryContent(displayAssistantText))}
+                    {normalizeHumanStepHistoryContent(inlineAssistantText) ?? inlineAssistantText}
                   </div>
                 </div>
               </div>
