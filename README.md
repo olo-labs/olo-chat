@@ -3,48 +3,291 @@ Copyright (c) 2026 Olo Labs
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# Olo Chat
+# OLO Chat
 
-A chat interface for **Olo** — start conversations, send messages, and follow run events in real time.
+> The interactive chat experience for **OLO** — a platform for building durable, multi-agent AI workflows.
 
-## For users
-
-- **Chat** — Pick a **preset** (role) beside the composer: Ask, Fast, Detailed, and others from backend workflow config. Subtitle **Conversation with Olo AI**. While the model runs, you see **who is thinking** and a short **summary** line; message history shows **which preset** was used per turn. **Run again** (under user messages) lists other presets by **emoji + name**. Run events in the **Events** sidebar; **human** steps show **buttons** from the worker.
-- **Knowledge** — Manage knowledge sources and see status (placeholders).
-- **Documents** — Upload files to the backend shared storage.
-
-The app talks to the **Olo backend** for sessions, messages, and events. **Tenant** is determined by the backend; **task queue** comes from the selected preset.
-
-## Quick start
-
-1. Start the **olo backend** (port 7080), e.g. `start.bat` from the `olo` folder.
-2. From this directory:
-
-   ```bash
-   npm install
-   npm run dev
-   ```
-
-3. Open **http://localhost:3000**.
-
-For backend setup, environment variables, Docker, and technical details, see **docs** below.
-
-## Documentation
-
-| Doc | What’s inside |
-|-----|----------------|
-| **[docs/README.md](docs/README.md)** | Overview, backend requirements, run instructions, project layout. |
-| **[docs/TECHNOLOGY_ARCHITECTURE.md](docs/TECHNOLOGY_ARCHITECTURE.md)** | Stack, architecture, design, communication. |
-| **[docs/UI_FEATURES.md](docs/UI_FEATURES.md)** | Panels, presets, Events, feature flags. |
-| **[docs/CHAT_UI.md](docs/CHAT_UI.md)** | Chat APIs, profiles, run events, WebSocket. |
-| **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | State, API layer, components, data flow. |
-| **[docs/DOCKER.md](docs/DOCKER.md)** | Docker build/run, env vars, Compose, CI. |
-| **[docs/DOCKER_HUB_DESCRIPTION.md](docs/DOCKER_HUB_DESCRIPTION.md)** | Docker Hub image description. |
-
-## Logo and assets
-
-Logo and related assets are in **public/** (e.g. `logo-full.svg`).
+OLO Chat is more than a chatbot. It is the primary interface for interacting with AI workflows, collaborating with specialized agents, monitoring execution in real time, providing human approvals, and visualizing workflow progress.
 
 ---
 
-*Developers: Node 18+, `npm run build`, Storybook, and store discipline — [docs/README.md](docs/README.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).*
+# 🎥 See OLO Chat in Action
+
+> **(PLACEHOLDER - Hero GIF / Demo Video)**
+
+---
+
+# Why OLO Chat?
+
+Traditional AI chat applications stop after a single model response.
+
+OLO Chat provides a window into an entire AI workflow.
+
+```
+User
+   │
+   ▼
+Planner
+   │
+   ▼
+Multiple AI Agents
+   │
+   ▼
+Tools & Integrations
+   │
+   ▼
+Human Approval
+   │
+   ▼
+Workflow Result
+```
+
+Watch every step as it happens.
+
+---
+
+# ✨ Features
+
+### 💬 Multi-Agent Conversations
+
+Choose different AI workflow presets such as:
+
+* Ask
+* Fast
+* Detailed
+* Custom enterprise workflows
+
+Every message records the workflow that generated the response.
+
+---
+
+### ⚡ Live Workflow Execution
+
+Watch workflows execute in real time.
+
+* Current executing agent
+* Progress updates
+* Execution summaries
+* Timeline events
+* Worker status
+
+> **(PLACEHOLDER - Execution Timeline Screenshot)**
+
+---
+
+### 🤝 Human-in-the-Loop
+
+OLO workflows can pause for human decisions.
+
+Approve, reject or provide additional input directly inside the conversation.
+
+> **(PLACEHOLDER - Human Approval Screenshot)**
+
+---
+
+### 🔄 Run Again
+
+Replay the same prompt using different workflow presets without rewriting your request.
+
+Compare different AI strategies instantly.
+
+---
+
+### 📚 Knowledge Management
+
+Upload and manage enterprise knowledge sources for AI workflows.
+
+> **(PLACEHOLDER - Knowledge Screenshot)**
+
+---
+
+### 📄 Document Upload
+
+Upload documents directly into shared backend storage for workflow processing.
+
+Supported workflows can consume uploaded documents automatically.
+
+> **(PLACEHOLDER - Upload Screenshot)**
+
+---
+
+# UI Overview
+
+| Area      | Purpose                          |
+| --------- | -------------------------------- |
+| Chat      | Multi-agent conversations        |
+| Events    | Live workflow execution timeline |
+| Knowledge | Knowledge source management      |
+| Documents | File uploads                     |
+| Presets   | Switch AI workflows instantly    |
+
+> **(PLACEHOLDER - Full UI Screenshot)**
+
+---
+
+# Architecture
+
+OLO Chat communicates with the OLO Backend using REST, Server-Sent Events (SSE), and WebSockets.
+
+```
+Browser
+
+↓
+
+OLO Chat
+
+↓
+
+OLO Backend
+
+↓
+
+Temporal
+
+↓
+
+Distributed Workers
+```
+
+The backend manages:
+
+* Sessions
+* Messages
+* Workflow Runs
+* Live Events
+* Human Interaction
+
+Task queues and workflow selection are automatically resolved from workflow definitions.
+
+---
+
+# Quick Start
+
+## Prerequisites
+
+* Node.js 18+
+* OLO Backend running (default: localhost:7080)
+
+## Install
+
+```bash
+npm install
+```
+
+## Development
+
+```bash
+npm run dev
+```
+
+Open:
+
+```
+http://localhost:3000
+```
+
+---
+
+# Screenshots
+
+## Conversation
+
+> **(PLACEHOLDER)**
+
+---
+
+## Workflow Events
+
+> **(PLACEHOLDER)**
+
+---
+
+## Human Approval
+
+> **(PLACEHOLDER)**
+
+---
+
+## Knowledge Management
+
+> **(PLACEHOLDER)**
+
+---
+
+## Documents
+
+> **(PLACEHOLDER)**
+
+---
+
+# Documentation
+
+| Document                        | Description                                |
+| ------------------------------- | ------------------------------------------ |
+| docs/README.md                  | Project overview and development guide     |
+| docs/ARCHITECTURE.md            | Frontend architecture and state management |
+| docs/TECHNOLOGY_ARCHITECTURE.md | Technology stack and design                |
+| docs/UI_FEATURES.md             | User interface capabilities                |
+| docs/CHAT_UI.md                 | Chat APIs, workflow presets and events     |
+| docs/DOCKER.md                  | Docker deployment                          |
+| docs/DOCKER_HUB_DESCRIPTION.md  | Docker Hub description                     |
+
+---
+
+# Contributing
+
+We're building the next generation of enterprise AI user experiences.
+
+Whether you're interested in:
+
+* React
+* TypeScript
+* UX
+* Workflow Visualization
+* AI Interfaces
+* Developer Experience
+
+there's an opportunity to contribute.
+
+See:
+
+```
+CONTRIBUTING.md
+```
+
+---
+
+# Looking for Founding UI Maintainers
+
+We're actively looking for contributors interested in owning parts of the OLO Chat experience.
+
+Potential ownership areas include:
+
+* Conversation Experience
+* Workflow Timeline
+* Workflow Visualization
+* Human Approval UI
+* Knowledge Management
+* Document Management
+* Accessibility
+* Theme System
+* Plugin Framework
+
+If you'd like to help shape the future of AI workflow interfaces, we'd love to collaborate.
+
+---
+
+# Related Projects
+
+* OLO Backend
+* OLO Worker
+* OLO Studio
+* OLO Kernel
+* OLO SDK
+* OLO Definition
+
+Together they form the complete OLO platform for enterprise AI orchestration.
+
+---
+
+Apache License 2.0
