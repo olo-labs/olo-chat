@@ -6,6 +6,10 @@
 import { describe, expect, it } from 'vitest'
 import type { RunEventDto } from '../api/chatApi'
 import {
+  buildHumanStepHistoryText,
+  formatHumanStepReplyForDisplay,
+  normalizeHumanStepHistoryContent,
+  resolveHumanStepAssistantDisplay,
   DEFAULT_HUMAN_APPROVE_OPTION,
   DEFAULT_HUMAN_CANCEL_OPTION,
   DEFAULT_HUMAN_OPTION_BUTTONS,
@@ -28,6 +32,69 @@ function humanWaiting(runId: string, seq = 1): RunEventDto {
   }
 }
 
+describe('normalizeHumanStepHistoryContent', () => {
+  it('keeps only the prompt line when no operator reply is known yet', () => {
+    const raw = 'User Input Step: Approve container restart\nApprove\nCancel'
+    expect(normalizeHumanStepHistoryContent(raw)).toBe('User Input Step: Approve container restart')
+  })
+
+  it('shows prompt plus chosen operator reply', () => {
+    const raw = 'User Input Step: Approve container restart\nApprove\nCancel'
+    expect(normalizeHumanStepHistoryContent(raw, { chosenReply: 'Approve' })).toBe(
+      'User Input Step: Approve container restart\nApprove'
+    )
+  })
+
+  it('strips legacy <Options> marker lines', () => {
+    const raw = 'User Input Step: Book ticket\n<Options>\nApprove\nCancel'
+    expect(normalizeHumanStepHistoryContent(raw)).toBe('User Input Step: Book ticket')
+  })
+})
+
+describe('resolveHumanStepAssistantDisplay', () => {
+  it('merges the following user reply into the assistant human-step bubble', () => {
+    const messages = [
+      {
+        messageId: 'a1',
+        role: 'assistant',
+        content: 'User Input Step: Approve container restart\nApprove\nCancel',
+        runId: 'run-1',
+      },
+      { messageId: 'u1', role: 'user', content: 'Approve', runId: 'run-1' },
+    ] as const
+    expect(resolveHumanStepAssistantDisplay([...messages], 0, messages[0].content)).toBe(
+      'User Input Step: Approve container restart\nApprove'
+    )
+  })
+})
+
+describe('buildHumanStepHistoryText', () => {
+  it('uses operator field values for plugin forms', () => {
+    expect(
+      buildHumanStepHistoryText(
+        [
+          { id: 'approveRestart', type: 'boolean', ui: { widget: 'APPROVAL_TOGGLE' } },
+          { id: 'containerId', type: 'string', ui: { widget: 'STRING' } },
+        ],
+        { approveRestart: 'true', containerId: 'c1' },
+        'Submit'
+      )
+    ).toBe('Yes\nc1')
+  })
+
+  it('falls back to the clicked action label for options-only steps', () => {
+    expect(buildHumanStepHistoryText([], {}, 'Approve container restart')).toBe('Approve container restart')
+  })
+})
+
+describe('formatHumanStepReplyForDisplay', () => {
+  it('returns persisted operator input as-is', () => {
+    expect(formatHumanStepReplyForDisplay('Approve container restart')).toBe('Approve container restart')
+    expect(formatHumanStepReplyForDisplay('my-container-id')).toBe('my-container-id')
+    expect(formatHumanStepReplyForDisplay('Yes\nmy-container-id')).toBe('Yes\nmy-container-id')
+  })
+})
+
 describe('humanStepEventKey', () => {
   it('builds a stable key per waiting event', () => {
     expect(humanStepEventKey(humanWaiting('run-1', 3))).toBe('run-1:human-input:3')
@@ -35,7 +102,7 @@ describe('humanStepEventKey', () => {
 })
 
 describe('findPendingHumanEvent', () => {
-  it('returns null without an active run id', () => {
+  it('returns null without an active run id (no run-id fallback in chat)', () => {
     expect(findPendingHumanEvent([humanWaiting('run-1')], null)).toBeNull()
   })
 
@@ -60,6 +127,23 @@ describe('findPendingHumanEvent', () => {
       },
     ]
     expect(findPendingHumanEvent(events, 'run-1')).toBeNull()
+  })
+
+  it('still shows human wait when temporal completion event arrived early', () => {
+    const events: RunEventDto[] = [
+      {
+        runId: 'run-1',
+        nodeId: 'root',
+        parentNodeId: null,
+        nodeType: 'SYSTEM',
+        status: 'COMPLETED',
+        sequenceNumber: 2,
+        timestamp: 2,
+        output: { source: 'temporal' },
+      },
+      humanWaiting('run-1', 3),
+    ]
+    expect(findPendingHumanEvent(events, 'run-1')?.nodeId).toBe('human-input')
   })
 })
 

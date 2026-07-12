@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { listMessages, submitHumanInput } from '../api/chatApi'
 import type { RunEventDto } from '../api/chatApi'
 import {
+  buildHumanStepHistoryText,
   findPendingHumanEvent,
   humanStepEventKey,
   humanStepOptionsFromEvent,
@@ -17,6 +18,7 @@ import {
   resolveHumanStepFooterActions,
   type HumanStepParameter,
 } from '../lib/chatHumanStep'
+import { isActiveRunForSession } from '../store/runEvents'
 import {
   approvalTogglesAllowApprove,
   defaultFieldValue,
@@ -63,6 +65,7 @@ export function useChatHumanInput(
   runEvents: RunEventDto[],
   activeRunId: string | null,
   sessionId: string | null,
+  sessionActive: boolean,
   setMessages: React.Dispatch<React.SetStateAction<import('../api/chatApi').ChatMessageDto[]>>,
   setError: React.Dispatch<React.SetStateAction<string | null>>
 ) {
@@ -72,9 +75,14 @@ export function useChatHumanInput(
 
   useEffect(() => {
     setAnsweredHumanStepKey(null)
-  }, [activeRunId])
+  }, [activeRunId, sessionId])
 
-  const rawPendingHumanEvent = findPendingHumanEvent(runEvents, activeRunId)
+  const runBelongsToActiveSession =
+    sessionActive && isActiveRunForSession(sessionId, activeRunId) && !!activeRunId?.trim()
+
+  const rawPendingHumanEvent = runBelongsToActiveSession
+    ? findPendingHumanEvent(runEvents, activeRunId)
+    : null
   const rawPendingKey = humanStepEventKey(rawPendingHumanEvent)
   const pendingHumanEvent =
     rawPendingHumanEvent && rawPendingKey !== answeredHumanStepKey ? rawPendingHumanEvent : null
@@ -131,7 +139,15 @@ export function useChatHumanInput(
           humanStepParameters.length > 0
             ? buildPluginSubmitMessage(humanStepParameters, humanFieldValues)
             : message
-        await submitHumanInput(pendingHumanEvent.runId, { approved, message: resolvedMessage })
+        const historyText =
+          humanStepParameters.length > 0
+            ? buildHumanStepHistoryText(humanStepParameters, humanFieldValues, message)
+            : message
+        await submitHumanInput(pendingHumanEvent.runId, {
+          approved,
+          message: resolvedMessage,
+          historyText,
+        })
         if (sessionId) {
           listMessages(sessionId).then(setMessages).catch(() => {})
         }

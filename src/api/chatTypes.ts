@@ -101,4 +101,6 @@ export interface RunResponseDto {
 export interface HumanInputRequestDto {
   approved: boolean
   message?: string
+  /** Chat history line(s); when omitted, backend uses {@link message}. */
+  historyText?: string
 }

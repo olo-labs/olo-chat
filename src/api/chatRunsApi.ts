@@ -35,6 +35,9 @@ export async function submitHumanInput(runId: string, body: HumanInputRequestDto
     body: JSON.stringify({
       approved: !!body.approved,
       message: body.message ?? '',
+      ...(body.historyText != null && body.historyText !== ''
+        ? { historyText: body.historyText }
+        : {}),
     }),
   })
   if (!res.ok) throw new Error(`Human input failed: ${res.status}`)

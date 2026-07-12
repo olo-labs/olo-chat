@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { listMessages } from '../api/chatApi'
 import type { ChatMessageDto, ChatProfileDto } from '../api/chatApi'
 import { sessionDisplayStore } from '../store/sessionDisplay'
@@ -48,10 +48,12 @@ export function useChatView({ tenantId, newChatTrigger = 0, chatProfiles }: UseC
 
   const { profileByRunId, recordProfileForRun } = useChatProfileByRun(sessionId, chatProfiles)
   const runTracking = useChatRunTracking({ sessionId, loading, setMessages, setSending })
+
   const humanInput = useChatHumanInput(
-    runTracking.runEvents,
+    runTracking.currentRunEvents,
     runTracking.activeRunId,
     sessionId,
+    !!sessionId,
     setMessages,
     setError
   )

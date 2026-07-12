@@ -9,6 +9,7 @@ import type { ChatMessageDto, RunEventDto } from '../api/chatApi'
 import {
   eventsForRun,
   getActiveRunStorageKey,
+  isActiveRunForSession,
   isLivenessEvent,
   loadPersistedRunEvents,
   RUN_EVENTS_PERSIST_MAX,
@@ -41,6 +42,8 @@ export function useChatRunTracking({
   const handleRunEvent = useCallback(
     (rid: string, _ev: RunEventDto) => {
       if (!sessionId) return
+      const active = lastOutboundRunIdRef.current?.trim()
+      if (active && rid.trim() !== active) return
       getRunResponse(rid).then((r) => {
         if (r?.response?.trim()) setQueriedResponse(r.response.trim())
       })
@@ -118,8 +121,9 @@ export function useChatRunTracking({
 
   useEffect(() => {
     if (!sessionId || !humanWaitingRefetchKey) return
+    if (!isActiveRunForSession(sessionId, activeRunId)) return
     listMessages(sessionId).then(setMessages).catch(() => {})
-  }, [sessionId, humanWaitingRefetchKey, setMessages])
+  }, [sessionId, activeRunId, humanWaitingRefetchKey, setMessages])
 
   const progressEvents = runEvents.filter((e) => !isLivenessEvent(e)).slice(-RUN_EVENTS_PERSIST_MAX)
 

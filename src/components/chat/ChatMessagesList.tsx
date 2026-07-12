@@ -5,13 +5,14 @@
 
 import type { Ref } from 'react'
 import type { ChatMessageDto, ChatProfileDto } from '../../api/chatApi'
+import { isHumanStepReplyMessage } from '../../lib/chatHumanStep'
 import { ChatInlineAssistant, ChatMessageItem } from './ChatMessageItem'
 
 export interface ChatMessagesListProps {
   loading: boolean
   messages: ChatMessageDto[]
   messagesEndRef: Ref<HTMLDivElement>
-  resolveAssistantBubbleText: (m: ChatMessageDto) => string | null
+  resolveAssistantBubbleText: (m: ChatMessageDto, index: number) => string | null
   profileByRunId: Record<string, { profileId: string; label: string }>
   runAgainProfiles: ChatProfileDto[]
   chatProfiles: ChatProfileDto[]
@@ -45,7 +46,8 @@ export function ChatMessagesList({
       ) : (
         <>
           {messages.map((m, index) => {
-            const assistantText = m.role === 'assistant' ? resolveAssistantBubbleText(m) : null
+            if (m.role === 'user' && isHumanStepReplyMessage(messages, index)) return null
+            const assistantText = m.role === 'assistant' ? resolveAssistantBubbleText(m, index) : null
             if (m.role === 'assistant' && assistantText == null) return null
             return (
               <ChatMessageItem

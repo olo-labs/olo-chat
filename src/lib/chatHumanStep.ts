@@ -5,25 +5,95 @@
 
 import type { ChatMessageDto, RunEventDto } from '../api/chatApi'
 import { isWorkflowCancelled, isWorkflowFinished } from './assistantResponse'
-import { hasNonButtonInputControls } from './humanInputWidget'
+import { hasNonButtonInputControls, resolveHumanInputWidget } from './humanInputWidget'
 
 function stringValue(v: unknown): string | null {
   return typeof v === 'string' && v.trim().length > 0 ? v.trim() : null
 }
 
-/** Older human-step assistant lines may contain a lone `<Options>` line and extra newlines; strip for display. */
-export function normalizeHumanStepHistoryContent(raw: string | null | undefined): string | null | undefined {
-  if (raw == null) return raw
-  const head = raw.trimStart()
-  if (head.startsWith('{')) return raw
-  if (!raw.includes('User Input Step:')) return raw
+export type NormalizeHumanStepHistoryOptions = {
+  /** When set, assistant history shows prompt + this operator choice only (not all option labels). */
+  chosenReply?: string | null
+}
+
+function humanStepPromptHeadLine(lines: string[]): string | null {
+  return lines.find((line) => line.includes('User Input Step:')) ?? null
+}
+
+/** Collapse a human-step assistant line to prompt + optional single operator reply. */
+export function formatHumanStepHistoryPrompt(
+  raw: string,
+  chosenReply?: string | null
+): string {
   let s = raw.replace(/\r\n/g, '\n')
   s = s
     .split('\n')
     .filter((line) => !/^\s*<Options>\s*$/i.test(line))
     .join('\n')
   s = s.replace(/(User Input Step:[^\n]*)\n{2,}/g, '$1\n')
-  return s
+  const lines = s.split('\n').filter((line) => line.trim().length > 0)
+  const head = humanStepPromptHeadLine(lines)
+  if (!head) return s.trim()
+  const chosen = chosenReply?.trim()
+  if (chosen) return `${head}\n${chosen}`
+  return head
+}
+
+/** Short label for a persisted human-step user reply — shown as-is in chat history. */
+export function formatHumanStepReplyForDisplay(content: string | null | undefined): string | null {
+  const trimmed = content?.trim()
+  return trimmed ? trimmed : null
+}
+
+/** Build chat-history text from plugin form field values the operator entered. */
+export function buildHumanStepHistoryText(
+  parameters: HumanStepParameter[],
+  fieldValues: Record<string, string>,
+  fallback: string
+): string {
+  if (parameters.length === 0) return fallback.trim()
+  const lines: string[] = []
+  for (const param of parameters) {
+    const raw = (fieldValues[param.id] ?? '').trim()
+    if (!raw && !param.required) continue
+    const widget = resolveHumanInputWidget(param)
+    let display = raw
+    if (widget === 'BOOLEAN' || widget === 'APPROVAL_TOGGLE') {
+      if (raw === 'true') display = 'Yes'
+      else if (raw === 'false') display = 'No'
+      else if (!raw) continue
+    }
+    if (display) lines.push(display)
+  }
+  return lines.length > 0 ? lines.join('\n') : fallback.trim()
+}
+
+/** Older human-step assistant lines may list every option label; strip those for display. */
+export function normalizeHumanStepHistoryContent(
+  raw: string | null | undefined,
+  opts?: NormalizeHumanStepHistoryOptions
+): string | null | undefined {
+  if (raw == null) return raw
+  const head = raw.trimStart()
+  if (head.startsWith('{')) return raw
+  if (!raw.includes('User Input Step:')) return raw
+  return formatHumanStepHistoryPrompt(raw, opts?.chosenReply)
+}
+
+/** Merge assistant human-step prompt with the following operator reply for one bubble. */
+export function resolveHumanStepAssistantDisplay(
+  messages: ChatMessageDto[],
+  index: number,
+  assistantContent: string | null | undefined
+): string | null | undefined {
+  const normalized = normalizeHumanStepHistoryContent(assistantContent)
+  if (normalized == null || !normalized.includes('User Input Step:')) return normalized
+  const next = messages[index + 1]
+  if (next?.role !== 'user' || !isHumanStepReplyMessage(messages, index + 1)) {
+    return normalized
+  }
+  const reply = formatHumanStepReplyForDisplay(next.content)
+  return reply ? formatHumanStepHistoryPrompt(normalized, reply) : normalized
 }
 
 /** User message that is the worker human-step reply (follows assistant “User Input Step:” line). */
@@ -212,20 +282,48 @@ export function humanStepEventKey(ev: RunEventDto | null | undefined): string | 
   return `${ev.runId.trim()}:${ev.nodeId ?? ''}:${ev.sequenceNumber ?? 0}`
 }
 
+function isHumanWaitingEvent(ev: RunEventDto): boolean {
+  if (ev.nodeType?.toUpperCase() === 'HUMAN' && ev.status?.toUpperCase() === 'WAITING') {
+    return true
+  }
+  const output = readEventMap(ev, 'output')
+  const meta = readEventMap(ev, 'metadata')
+  if (meta?.phase === 'human-wait' && ev.nodeType?.toUpperCase() === 'HUMAN') {
+    return true
+  }
+  if (output?.status === 'HUMAN_WAITING' || output?.approvalStatus === 'waiting') {
+    return ev.nodeType?.toUpperCase() === 'HUMAN'
+  }
+  return false
+}
+
+function resolveScopedRunId(
+  runEvents: RunEventDto[],
+  activeRunId?: string | null,
+  allowRunIdFromEvents = false
+): string | null {
+  const fromActive = activeRunId?.trim()
+  if (fromActive) return fromActive
+  if (!allowRunIdFromEvents) return null
+  for (let i = runEvents.length - 1; i >= 0; i--) {
+    const id = runEvents[i]?.runId?.trim()
+    if (id) return id
+  }
+  return null
+}
+
 export function findPendingHumanEvent(
   runEvents: RunEventDto[],
-  activeRunId?: string | null
+  activeRunId?: string | null,
+  options?: { allowRunIdFromEvents?: boolean }
 ): RunEventDto | null {
-  const runId = activeRunId?.trim()
+  const runId = resolveScopedRunId(runEvents, activeRunId, options?.allowRunIdFromEvents === true)
   if (!runId) return null
 
   const scoped = runEvents.filter((e) => (e.runId ?? '').trim() === runId)
   if (scoped.length === 0) return null
-  if (isWorkflowCancelled(scoped) || isWorkflowFinished(scoped)) return null
 
-  const latestHumanWaiting = [...scoped]
-    .reverse()
-    .find((e) => e.nodeType?.toUpperCase() === 'HUMAN' && e.status?.toUpperCase() === 'WAITING')
+  const latestHumanWaiting = [...scoped].reverse().find(isHumanWaitingEvent)
   const hasHumanCompletedAfterWait = latestHumanWaiting
     ? scoped.some(
         (e) =>
@@ -235,7 +333,12 @@ export function findPendingHumanEvent(
           (e.sequenceNumber ?? 0) >= (latestHumanWaiting.sequenceNumber ?? 0)
       )
     : false
-  return latestHumanWaiting && !hasHumanCompletedAfterWait ? latestHumanWaiting : null
+  if (latestHumanWaiting && !hasHumanCompletedAfterWait) {
+    return latestHumanWaiting
+  }
+
+  if (isWorkflowCancelled(scoped) || isWorkflowFinished(scoped)) return null
+  return null
 }
 
 /** Footer actions for a human step (plugin options or default Approve/Cancel buttons). */

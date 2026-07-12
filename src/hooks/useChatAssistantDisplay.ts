@@ -13,7 +13,7 @@ import {
   pickResponseFromEvents,
   resolvePersistedAssistantContent,
 } from '../lib/assistantResponse'
-import { normalizeHumanStepHistoryContent } from '../lib/chatHumanStep'
+import { resolveHumanStepAssistantDisplay } from '../lib/chatHumanStep'
 import { eventsForRun } from '../store/runEvents'
 
 export function useChatWorkflowComplete(
@@ -82,12 +82,15 @@ export function computeChatAssistantDisplay({
 
   const assistantMessageContext = { activeRunId, sending, events: currentRunEvents }
 
-  const resolveAssistantBubbleText = (m: ChatMessageDto): string | null =>
-    resolvePersistedAssistantContent(normalizeHumanStepHistoryContent(m.content), {
-      ...assistantMessageContext,
-      runId: m.runId,
-      events: m.runId ? eventsForRun(runEvents, m.runId) : currentRunEvents,
-    })
+  const resolveAssistantBubbleText = (m: ChatMessageDto, index: number): string | null =>
+    resolvePersistedAssistantContent(
+      resolveHumanStepAssistantDisplay(messages, index, m.content),
+      {
+        ...assistantMessageContext,
+        runId: m.runId,
+        events: m.runId ? eventsForRun(runEvents, m.runId) : currentRunEvents,
+      }
+    )
 
   const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null
   const lastMessageIsAssistant =

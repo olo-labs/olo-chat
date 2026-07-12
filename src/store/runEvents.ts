@@ -16,6 +16,21 @@ export function getActiveRunStorageKey(sessionId: string): string {
   return `olo:chat-active-run:${sessionId}`
 }
 
+/** True when activeRunId is the run this chat session is tracking (not another session's run). */
+export function isActiveRunForSession(
+  sessionId: string | null | undefined,
+  activeRunId: string | null | undefined,
+): boolean {
+  const sid = sessionId?.trim()
+  const rid = activeRunId?.trim()
+  if (!sid || !rid) return false
+  try {
+    return sessionStorage.getItem(getActiveRunStorageKey(sid))?.trim() === rid
+  } catch {
+    return false
+  }
+}
+
 export function isLivenessEvent(e: RunEventDto): boolean {
   return (e.nodeType ?? '').toLowerCase() === 'liveness'
 }
@@ -114,6 +129,16 @@ export const runEventsStore = create<RunEventsState>((set) => ({
   addEvent: (event) => {
     let appended = false
     set((s) => {
+      const eventRunId = (event.runId ?? '').trim()
+      const activeRunId = (s.runId ?? '').trim()
+      if (
+        eventRunId &&
+        eventRunId !== '__liveness__' &&
+        activeRunId &&
+        eventRunId !== activeRunId
+      ) {
+        return s
+      }
       const key = workflowEventDedupeKey(event)
       if (key) {
         const already = s.events.some((e) => workflowEventDedupeKey(e) === key)

@@ -178,11 +178,12 @@ export function ChatHumanInputCard({
 
   const handleAction = (opt: HumanStepOption, index: number) => {
     const approved = opt.approved !== undefined ? opt.approved : index === 0
+    const replyText = opt.message?.trim() || opt.label
     if (!approved) {
-      onSubmit(false, opt.message ?? 'Cancelled by operator')
+      onSubmit(false, replyText)
       return
     }
-    onSubmit(true, opt.message ?? '')
+    onSubmit(true, replyText)
   }
 
   return (
