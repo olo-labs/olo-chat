@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 Olo Labs
+ * SPDX-License-Identifier: Apache-2.0
+ */
 import type { RunEventDto } from '../api/chatApi'
 
 /** Shown only after a completed/failed run when no workflow return text could be resolved. */
@@ -92,8 +96,18 @@ export function pickResponseFromEvents(events: RunEventDto[]): string | null {
   return null
 }
 
+/** True when the run was cancelled by the user. */
+export function isWorkflowCancelled(events: RunEventDto[]): boolean {
+  return events.some((e) => {
+    if (e.nodeType?.toUpperCase() !== 'SYSTEM' || e.status?.toUpperCase() !== 'FAILED') return false
+    const output = e.output as Record<string, unknown> | undefined
+    return output?.status === 'CANCELLED'
+  })
+}
+
 /** True when the run has a final workflow result or terminal failure (not CONTEXT_READY alone). */
 export function isWorkflowFinished(events: RunEventDto[]): boolean {
+  if (isWorkflowCancelled(events)) return true
   if (
     events.some(
       (e) => e.nodeType?.toUpperCase() === 'SYSTEM' && e.status?.toUpperCase() === 'FAILED',
@@ -133,6 +147,9 @@ export function normalizeResponseText(text: string | null | undefined): string |
 }
 
 export function fallbackResponseMessage(runStatus: string | undefined): string {
+  if (runStatus === 'cancelled') {
+    return 'Run cancelled.'
+  }
   if (runStatus === 'failed') {
     return "Apologise, the workflow failed before a response could be generated."
   }
@@ -145,6 +162,7 @@ export function isRunTerminalFromApi(
   events: RunEventDto[],
 ): boolean {
   if (!runStatus) return false
+  if (runStatus === 'cancelled') return true
   if (runStatus === 'failed') return true
   if (runStatus === 'completed') return isWorkflowFinished(events)
   return false
