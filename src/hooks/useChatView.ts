@@ -48,7 +48,13 @@ export function useChatView({ tenantId, newChatTrigger = 0, chatProfiles }: UseC
 
   const { profileByRunId, recordProfileForRun } = useChatProfileByRun(sessionId, chatProfiles)
   const runTracking = useChatRunTracking({ sessionId, loading, setMessages, setSending })
-  const humanInput = useChatHumanInput(runTracking.runEvents, sessionId, setMessages, setError)
+  const humanInput = useChatHumanInput(
+    runTracking.runEvents,
+    runTracking.activeRunId,
+    sessionId,
+    setMessages,
+    setError
+  )
   const progress = useChatProgressPanel()
 
   const { handleSend, handleResend } = useChatMessaging({

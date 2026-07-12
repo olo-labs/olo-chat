@@ -55,7 +55,7 @@ Feature flags: `config/features.ts` (chat, knowledge, documents).
 | **Thinking** | “{displayName} is thinking…” + `displaySummary` while run active. |
 | **Config pills** | Per `runId` on user/assistant bubbles; persisted in `sessionStorage`. |
 | **Run again** | Under user messages; menu of other presets with `runAgain: true`. |
-| **Human input** | Card on HUMAN WAITING; buttons from worker `input.options`. |
+| **Human input** | Card on HUMAN WAITING. Plugin-driven **form fields** (`parameters[].type` + `ui.widget`) and **footer actions** (`options`). See [CHAT_UI.md](./CHAT_UI.md#human-input-plugin-forms). |
 | **Worker progress** | Collapsible strip below composer; last 200 events summarized; expand/height persisted. |
 | **Send** | `taskQueue` from selected preset; disabled until run completes. |
 | **Health** | Disconnected state when backend unreachable. |

@@ -67,7 +67,7 @@ Set **`OLO_CONFIGURATION_DIR`** on the backend (see `olo/start.bat` and `olo/.en
 | Run response | `GET /api/runs/{runId}/response` | Final assistant text. |
 | Run status | `GET /api/runs/{runId}` | Polled on completion. |
 | WebSocket | `ws(s)://.../ws` | `SUBSCRIBE_RUN` for run events; PING/PONG for liveness. |
-| Human input | `POST /api/runs/{runId}/human-input` | `{ "approved", "message" }` from worker `input.options`. |
+| Human input | `POST /api/runs/{runId}/human-input` | `{ "approved", "message" }`. Plugin forms send `message` as JSON keyed by parameter ids; see [human input widgets](#human-input-plugin-forms). |
 | Delete session | `DELETE /api/sessions/{sessionId}` | Optimistic UI removal. |
 | Delete all | `DELETE /api/tenants/{tenantId}/sessions?queue=&pipeline=` | Scoped to **current preset** queue + pipeline. |
 
@@ -109,6 +109,58 @@ Queue and pipeline for sends come from the **selected preset** at message time (
 ## Execution model (backend)
 
 **OloExecutionEvent**: `runId`, `nodeId`, `nodeType`, `status`, `input`, `output`, `metadata`, `sequenceNumber`. The Chat UI shows a flat ordered list for the current run (Events panel: last 25; progress strip: up to 200).
+
+---
+
+## Human input plugin forms
+
+When a `HUMAN` node references `approval.inputPluginId`, the worker enriches the WAITING event `output` with a plugin schema:
+
+```json
+{
+  "inputType": "plugin",
+  "inputPluginId": "olo-core:human-input-restart-container",
+  "parameters": [
+    {
+      "id": "approveRestart",
+      "label": "Approve container restart?",
+      "type": "boolean",
+      "required": true,
+      "ui": { "widget": "APPROVAL_TOGGLE", "group": "Approval", "order": 0 }
+    },
+    {
+      "id": "containerId",
+      "label": "Container ID",
+      "type": "string",
+      "required": true,
+      "ui": { "widget": "STRING", "group": "Restart action", "order": 1 }
+    }
+  ],
+  "options": [
+    { "label": "Approve container restart", "approved": true },
+    { "label": "Cancel", "approved": false }
+  ]
+}
+```
+
+### Widget → UI control
+
+| `ui.widget` | Control |
+|-------------|---------|
+| `STRING` | Single-line textbox |
+| `TEXTAREA` | Multi-line text area |
+| `NUMBER` | Numeric input |
+| `BOOLEAN` | Checkbox |
+| `APPROVAL_TOGGLE` | Yes / No button pair |
+| `SELECT` | Dropdown (`type: enum`, `values[]`) |
+
+Rendering is implemented in `src/lib/humanInputWidget.ts` and `ChatHumanInputCard.tsx`. Approve actions stay disabled until required fields are filled; every `APPROVAL_TOGGLE` must be **Yes** before Approve is enabled.
+
+When the form includes text/select/checkbox fields, the card shows **Submit** and **Cancel** footer buttons alongside the fields. Otherwise the step is **options-only**: **Approve** and **Cancel** buttons (or plugin `options`). Free-text input is not used when buttons suffice.
+
+The card hides immediately when the operator clicks an action (optimistic dismiss) and stays hidden after cancel/completed runs.
+
+Submit encodes field values as JSON in `message` (booleans as `true`/`false`). Plugin authoring is documented in [olo-core `HUMAN_INPUT_PLUGINS.md`](../../olo-mono/olo-core/docs/HUMAN_INPUT_PLUGINS.md).
 
 ---
 

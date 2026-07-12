@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useState } from 'react'
-import { cancelRun, getRun, listMessages } from '../api/chatApi'
+import { cancelRun, listMessages } from '../api/chatApi'
 import { getActiveRunStorageKey } from '../store/runEvents'
 
 export interface UseChatCancelRunOptions {
@@ -36,20 +36,17 @@ export function useChatCancelRun({
     setError(null)
     try {
       await cancelRun(activeRunId)
-      const run = await getRun(activeRunId)
-      if (run?.status === 'cancelled' || run?.status === 'completed' || run?.status === 'failed') {
-        unsubscribeRunRef.current?.()
-        unsubscribeRunRef.current = null
-        setSending(false)
-        setActiveRunId(null)
-        if (sessionId) {
-          try {
-            sessionStorage.removeItem(getActiveRunStorageKey(sessionId))
-          } catch {
-            /* quota */
-          }
-          listMessages(sessionId).then(setMessages).catch(() => {})
+      unsubscribeRunRef.current?.()
+      unsubscribeRunRef.current = null
+      setSending(false)
+      setActiveRunId(null)
+      if (sessionId) {
+        try {
+          sessionStorage.removeItem(getActiveRunStorageKey(sessionId))
+        } catch {
+          /* quota */
         }
+        listMessages(sessionId).then(setMessages).catch(() => {})
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Cancel failed')

@@ -70,6 +70,7 @@ Watch workflows execute in real time.
 * Execution summaries
 * Timeline events
 * Worker status
+* **Cancel** in-progress runs (signals Temporal cancellation; run again after cancel completes)
 
 > **(PLACEHOLDER - Execution Timeline Screenshot)**
 
@@ -157,7 +158,7 @@ The backend manages:
 * Live Events
 * Human Interaction
 
-Task queues and workflow selection are automatically resolved from workflow definitions.
+Task queues and workflow selection are automatically resolved from workflow definitions. Activate scenario presets via **olo-ui → Administration → Scenarios** (copies into `current-active` and refreshes workers).
 
 ---
 

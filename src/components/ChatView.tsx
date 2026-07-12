@@ -81,11 +81,14 @@ export function ChatView({
         <ChatHumanInputCard
           pendingHumanEvent={view.humanInput.pendingHumanEvent}
           humanPromptMessage={view.humanInput.humanPromptMessage}
-          humanStepOptions={view.humanInput.humanStepOptions}
+          humanStepFooterActions={view.humanInput.humanStepFooterActions}
+          humanStepParameters={view.humanInput.humanStepParameters}
+          humanPluginName={view.humanInput.humanPluginName}
           humanTaskId={view.humanInput.humanTaskId}
-          humanInputType={view.humanInput.humanInputType}
-          humanInputText={view.humanInput.humanInputText}
-          setHumanInputText={view.humanInput.setHumanInputText}
+          usesPluginForm={view.humanInput.usesPluginForm}
+          humanFieldValues={view.humanInput.humanFieldValues}
+          setHumanFieldValue={view.humanInput.setHumanFieldValue}
+          pluginFormValid={view.humanInput.pluginFormValid}
           submittingHumanInput={view.humanInput.submittingHumanInput}
           onSubmit={view.humanInput.handleSubmitHumanInput}
         />
