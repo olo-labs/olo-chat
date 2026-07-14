@@ -14,6 +14,7 @@ import { getCurrentSocket, subscribeToRun } from '../lib/wsSingleton'
 export interface UseChatMessagingOptions {
   sessionId: string | null
   sending: boolean
+  selectedRagSource: string
   setSending: React.Dispatch<React.SetStateAction<boolean>>
   setError: React.Dispatch<React.SetStateAction<string | null>>
   setMessages: React.Dispatch<React.SetStateAction<ChatMessageDto[]>>
@@ -54,6 +55,7 @@ export function useChatMessaging(opts: UseChatMessagingOptions) {
   const {
     sessionId,
     sending,
+    selectedRagSource,
     setSending,
     setError,
     setMessages,
@@ -110,6 +112,7 @@ export function useChatMessaging(opts: UseChatMessagingOptions) {
       setQueriedResponse(null)
       sendMessage(sessionId, content.trim(), {
         taskQueue: q ? queueDisplayName(q) : undefined,
+        capabilitySource: selectedRagSource.trim() || undefined,
       })
         .then(({ runId }) => {
           console.log(`${logPrefix} B. sendMessage HTTP resolved`, { runId })
@@ -132,6 +135,7 @@ export function useChatMessaging(opts: UseChatMessagingOptions) {
       setRunCompletedFromPoll,
       setQueriedResponse,
       setMessages,
+      selectedRagSource,
       fetchSessions,
       beginRun,
     ]
@@ -160,6 +164,7 @@ export function useChatMessaging(opts: UseChatMessagingOptions) {
       console.log('[Chat] A. sendMessage HTTP start')
       sendMessage(sessionId, text, {
         taskQueue: q ? queueDisplayName(q) : undefined,
+        capabilitySource: selectedRagSource.trim() || undefined,
       })
         .then(({ runId }) => {
           console.log('[Chat] B. sendMessage HTTP resolved', { runId })
@@ -192,6 +197,7 @@ export function useChatMessaging(opts: UseChatMessagingOptions) {
       setRunCompletedFromPoll,
       setQueriedResponse,
       setMessages,
+      selectedRagSource,
       fetchSessions,
       beginRun,
     ]

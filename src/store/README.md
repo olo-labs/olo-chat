@@ -19,23 +19,22 @@ Stores are scoped by **domain** (runtime, ledger, configuration, etc.), not by U
 | `ui.ts` | App shell | Panels (expanded state, widths persisted), navigation (sectionId, subId, runId, tenantId), theme. **`runEventsBellUnread`** — left footer Events bell highlight when new workflow events arrived while the properties (Events) panel was closed; cleared when the panel opens. URL sync in App. |
 | `chatSessions.ts` | Chat sessions | Session list and selected session ID. Fetched tenant-wide; updated on create/delete (optimistic where applicable). |
 | `conversationPanel.ts` | Conversation panel | **selectedProfileId**, **selectedQueueId**, **selectedPipelineId** from the active chat preset (`GET /api/ui/context` `chatProfiles`). Used at send time and for delete-all scoping. |
-| `runEvents.ts` | Run execution | Current run ID and run events (SSE + WebSocket). **`ChatView` subscribes to `s.events`** as the chat timeline (human card, progress). `addEvent` (**dedupes** workflow events so hydrate + replay do not duplicate), `setRun` / **`setRun(null)`**, `hydrate`, `setOnRunEventCallback`, **`setOnWorkflowEventAppended`** ( **`App`** → **`runEventsBellUnread`** for new workflow appends only). **Last 200** non-liveness events persisted to **`localStorage`** per `runId`; **`sessionStorage`** tracks last active run per chat session. Liveness (PING/PONG) stored in memory; EventsList filters. |
+| `runEvents.ts` | Run execution | Current run ID and run events (SSE + WebSocket). **`ChatView` subscribes to `s.events`** as the chat timeline (human card, progress). `addEvent` (**dedupes** workflow events so hydrate + replay do not duplicate), `setRun` / **`setRun(null)`**, `hydrate`, `setOnRunEventCallback`, **`setOnWorkflowEventAppended`** (**`AppShell`** → **`useAppEffects`** → **`runEventsBellUnread`** for new workflow appends only). **Last 200** non-liveness events persisted to **`localStorage`** per `runId`; **`sessionStorage`** tracks last active run per chat session. Liveness (PING/PONG) stored in memory; EventsList filters. |
 | `sessionDisplay.ts` | Session display | Per-session custom title and first-message preview. Persisted (localStorage), capped 80 entries. Used for list labels and delete cleanup. |
 | `tenantConfig.ts` | Configuration (tenants) | Tenant list (from GET /api/tenants), selection, CRUD (save/update/delete), loading, “adding new”. |
 
-## Future domains (placeholders)
+| `knowledgeIngest.ts` | Knowledge (RAG) | Ingest job state for Knowledge Create/Status views. |
+| `documentUploads.ts` | Documents | Upload queue and per-file status. |
 
-Add **one store per domain** when you implement the feature:
+## Placeholder stores (stub files exist)
 
-| Store | Domain | Use when building |
-|-------|--------|-------------------|
-| `runtime.ts` | Runtime | Live runs, queues, metrics, run selection, run-level views |
-| `ledger.ts` | Ledger | Historical runs, cost, snapshots, replay, run-level views |
-| `runContext.ts` | Run context (shared) | Shared run-level state when same run is shown in Runtime vs Ledger |
-| `plugins.ts` | Plugins | Executor registry, plugin metadata |
-| `schema.ts` | Studio / schema | Canvas, versions, schema editing, test run results |
-
-Do **not** create stores per component (e.g. `treeViewStore`, `timelineStore`). Prefer one `runtime.ts` or `ledger.ts` that holds run-level view state for that domain.
+| Store | Domain | Status |
+|-------|--------|--------|
+| `runtime.ts` | Runtime | Stub — reserved for future live-run views |
+| `ledger.ts` | Ledger | Stub — reserved for historical run views |
+| `runContext.ts` | Run context | Stub |
+| `plugins.ts` | Plugins | Stub |
+| `schema.ts` | Studio / schema | Stub |
 
 ## Lifecycle, errors, side effects, runContext
 
@@ -44,7 +43,7 @@ Do **not** create stores per component (e.g. `treeViewStore`, `timelineStore`). 
 - **Side effects only in store actions.** API calls, subscriptions, and timers belong in store actions. Components stay declarative: they read from stores and call store actions; they do not call the API layer directly.
 - **runContext** holds summary/normalized data only. Heavy raw data (execution trees, event logs, large snapshots) stays in runtime/ledger store; runContext stays small to avoid re-render and memory issues.
 
-See **docs/ARCHITECTURE.md** (§5–§6, §6b–§6c) and **docs/DOMAIN_BOUNDARIES.md**.
+See **docs/ARCHITECTURE.md** for store conventions and domain boundaries.
 
 ## Usage
 

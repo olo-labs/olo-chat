@@ -27,7 +27,7 @@ Frontend for the **Olo** chat flow. It provides a chat UI that talks to the **ol
 ### Sections
 
 - **Chat** — **Conversation** only (`/chat/conversation`). Create a session, pick a **preset** beside the composer, send messages, and see run events (PLANNER, MODEL, TOOL, HUMAN, SYSTEM, plus WebSocket PING/PONG liveness). **Tools panel:** **New chat** + sessions list. APIs: `POST /api/sessions`, `POST /api/sessions/{sessionId}/messages`, `GET /api/runs/{runId}/events` (SSE), optional WebSocket `/ws`, `POST /api/runs/{runId}/human-input`.
-- **Knowledge** — **Sources**, **Create new**, **Status**. Placeholders until APIs are wired.
+- **Knowledge** — **Sources**, **Create new**, **Status**. Wired to `GET /api/knowledge/sources`, `POST /api/rag/ingest`, and `GET /api/documents`. See [CHAT_UI.md](./CHAT_UI.md#knowledge--rag).
 - **Documents** — **Upload / Manage Raw Files**: capability source dropdown (`VITE_CAPABILITY_SOURCE_OPTIONS`), upload to backend shared storage via `POST /api/resource/upload`.
 
 ### Chat profiles (required)

@@ -5,6 +5,7 @@
 
 import type { ChatProfileDto } from '../../api/chatApi'
 import { formatProfileOptionLabel } from '../../lib/chatProfileUi'
+import { useChatRagSources } from '../../hooks/useChatRagSources'
 
 export interface ChatComposerProps {
   chatProfiles: ChatProfileDto[]
@@ -14,6 +15,8 @@ export interface ChatComposerProps {
   setInput: (v: string) => void
   sending: boolean
   sessionId: string | null
+  selectedRagSource: string
+  onRagSourceChange: (source: string) => void
   onProfileChange: (id: string, prof: ChatProfileDto) => void
   onSend: () => void
 }
@@ -26,9 +29,13 @@ export function ChatComposer({
   setInput,
   sending,
   sessionId,
+  selectedRagSource,
+  onRagSourceChange,
   onProfileChange,
   onSend,
 }: ChatComposerProps) {
+  const { sources: ragSources } = useChatRagSources()
+
   return (
     <div className="chat-view-composer">
       <form
@@ -53,6 +60,22 @@ export function ChatComposer({
             {chatProfiles.map((p, i) => (
               <option key={p.id} value={p.id} title={p.displaySummary?.trim() ? p.displaySummary : undefined}>
                 {formatProfileOptionLabel(p, i)}
+              </option>
+            ))}
+          </select>
+          <select
+            id="chat-rag-source-select"
+            className="chat-view-profile-select chat-view-profile-select--pill chat-view-rag-select"
+            value={selectedRagSource}
+            onChange={(e) => onRagSourceChange(e.target.value)}
+            disabled={sending || !sessionId}
+            aria-label="Knowledge source (RAG)"
+            title="Optional indexed knowledge source for grounded answers"
+          >
+            <option value="">No RAG</option>
+            {ragSources.map((source) => (
+              <option key={source} value={source}>
+                📚 {source}
               </option>
             ))}
           </select>

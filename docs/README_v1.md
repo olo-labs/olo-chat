@@ -10,7 +10,7 @@ A chat interface for **Olo** — start conversations, send messages, and follow 
 ## For users
 
 - **Chat** — Pick a **preset** (role) beside the composer: Ask, Fast, Detailed, and others from backend workflow config. Subtitle **Conversation with Olo AI**. While the model runs, you see **who is thinking** and a short **summary** line; message history shows **which preset** was used per turn. **Run again** (under user messages) lists other presets by **emoji + name**. Run events in the **Events** sidebar; **human** steps show **buttons** from the worker.
-- **Knowledge** — Manage knowledge sources and see status (placeholders).
+- **Knowledge** — Manage knowledge sources (`GET /api/knowledge/sources`), ingest (`POST /api/rag/ingest`), and status views.
 - **Documents** — Upload files to the backend shared storage.
 
 The app talks to the **Olo backend** for sessions, messages, and events. **Tenant** is determined by the backend; **task queue** comes from the selected preset.

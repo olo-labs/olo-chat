@@ -105,6 +105,8 @@ export function ChatView({
         setInput={view.setInput}
         sending={view.sending}
         sessionId={view.sessionId}
+        selectedRagSource={view.selectedRagSource}
+        onRagSourceChange={view.setSelectedRagSource}
         onProfileChange={(id, prof) => {
           view.setSelectedProfileId(id)
           view.setSelectedQueueId(prof.queue)

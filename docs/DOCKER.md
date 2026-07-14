@@ -11,9 +11,10 @@ This document describes how to build and run the olo-chat frontend as a Docker c
 
 ## Overview
 
-- **Dockerfile** — Multi-stage: stage 1 uses Node to build the Vite app (`npm ci`, `npm run build`); stage 2 uses Nginx to serve the static `dist` on **port 80**. No runtime env; all config is baked in at build time.
-- **Environment variables** — All `VITE_*` values are **baked in at build time** by Vite. You pass them as Docker build args (or Compose `args` / CI variables). Changing the backend URL or Documents upload options requires a rebuild.
-- **GitHub Actions** — Workflow (`.github/workflows/docker-build.yml`) runs on push to `main`/`master` and on manual `workflow_dispatch`. Builds the image and pushes to GitHub Container Registry (ghcr.io). If repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` are set, also pushes to Docker Hub as `docker.io/<DOCKERHUB_USERNAME>/olo-chat`. Manual run has a **push** input (default: true) to control whether to push to registries.
+- **Dockerfile** — Multi-stage: stage 1 uses Node to build the Vite app (`npm ci`, `npm run build`); stage 2 uses Nginx to serve static `dist` on **port 80** and **proxy** `/api` and `/ws` to the backend at runtime.
+- **Runtime backend URL** — Set **`OLO_BACKEND_URL`** when starting the container (default `http://olo:7080`). Nginx uses `nginx.conf.template` + `docker-entrypoint.sh` to inject the proxy target. No rebuild required when only the backend URL changes.
+- **Build-time `VITE_*` vars** — Optional. When `VITE_API_BASE` is empty (default in the Dockerfile), the browser uses same-origin `/api` and `/ws` through the nginx proxy. Set `VITE_API_BASE` at build time only when the frontend must call a different origin directly.
+- **GitHub Actions** — Workflow (`.github/workflows/docker-build.yml`, name **Publish Docker image**) runs on push to `main`/`master` and on manual `workflow_dispatch`. Builds the image and pushes to GitHub Container Registry (ghcr.io). Docker Hub push requires repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`.
 
 ---
 
@@ -23,7 +24,7 @@ These are the only environment variables the frontend uses. They must be set at 
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| **VITE_API_BASE** | Yes (for API/WS) | `http://localhost:7080` | Base URL of the olo backend. The app will call `{VITE_API_BASE}/api` for REST and `ws://...` derived from this for WebSocket. No trailing slash. Examples: `http://localhost:7080`, `https://api.example.com`. |
+| **VITE_API_BASE** | No (proxy mode) | _(empty)_ | When empty, browser uses same-origin `/api` via nginx proxy. Set only when the SPA must call a remote API origin directly. |
 | **VITE_WS_ACCESS_TOKEN** | No | _(empty)_ | Optional WebSocket access token. If set, it is used when the app has no token in `sessionStorage` (e.g. before login). Prefer setting the token at runtime via login and `sessionStorage.accessToken`. |
 | **VITE_WS_PING_INTERVAL_SEC** | No | `10` | WebSocket ping interval (and reconnect delay) in seconds. Used for liveness checks. |
 | **VITE_CAPABILITY_SOURCE_OPTIONS** | No | _(empty)_ | Comma-separated **capability source** ids for the Documents upload dropdown (e.g. `product-docs,legal`). Preferred over `VITE_RAG_OPTIONS`. |
@@ -45,10 +46,16 @@ The checked-in **`Dockerfile`** declares **ARG/ENV** only for:
 
 Upload-related `VITE_*` variables are documented above but **not** passed through the Dockerfile unless you add matching `ARG`/`ENV` lines and rebuild. For Documents upload defaults in Docker, extend the Dockerfile or set capability sources in the UI without build-time ids.
 
+### Runtime variable (container start)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| **OLO_BACKEND_URL** | `http://olo:7080` | Backend URL for nginx to proxy `/api` and `/ws`. Set in Compose `environment` or `docker run -e`. |
+
 ### Notes
 
-- **CORS**: The backend must allow requests from the origin where the frontend is served (e.g. the domain or port of the Docker host).
-- **Build-time only**: Vite replaces `import.meta.env.VITE_*` during `vite build`. To change these values you must rebuild the image with new build args.
+- **CORS**: Not required when using same-origin proxy mode (empty `VITE_API_BASE`).
+- **Direct API mode**: Set `VITE_API_BASE` at build time when the SPA talks to the backend origin directly (dev server or legacy deployments).
 - **Chat profiles**: Not a frontend env var. The **olo backend** must serve `GET /api/ui/context` with `chatProfiles` from **`olo.configuration.dir`** (workflow JSON under e.g. `olo-mono/olo-definition/olo-configuration/current-active/`). Without that, the chat UI shows “No chat profiles configured.”
 
 ---
@@ -59,15 +66,14 @@ Sample Compose files are provided for local development and production.
 
 ### Development (`docker-compose.dev.yml`)
 
-Uses fixed build args pointing at a backend on the host at `http://localhost:7080`. Run the olo backend on your machine (e.g. port 7080) before starting the frontend.
+Proxies `/api` and `/ws` to the `olo` backend on the external `olo-net` network. Requires the backend stack to be running on that network.
 
 ```bash
-# Ensure backend is running at http://localhost:7080, then:
 docker compose -f docker-compose.dev.yml up --build
 ```
 
 - Frontend: **http://localhost:3000**
-- Build args: `VITE_API_BASE=http://localhost:7080`, `VITE_WS_PING_INTERVAL_SEC=10`
+- Runtime env: `OLO_BACKEND_URL` (default `http://olo:7080`)
 
 ### Demo (`docker-compose.demo.yml`)
 

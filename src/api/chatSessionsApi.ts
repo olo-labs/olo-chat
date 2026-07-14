@@ -83,12 +83,15 @@ export async function createSession(
 export async function sendMessage(
   sessionId: string,
   content: string,
-  options?: { taskQueue?: string }
+  options?: { taskQueue?: string; capabilitySource?: string }
 ): Promise<SendMessageResponse> {
+  const body: Record<string, unknown> = { content, taskQueue: options?.taskQueue }
+  const src = options?.capabilitySource?.trim()
+  if (src) body.capabilitySource = src
   const res = await fetch(`${CHAT_API}/sessions/${encodeURIComponent(sessionId)}/messages`, {
     method: 'POST',
     headers: withAuth({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ content, taskQueue: options?.taskQueue }),
+    body: JSON.stringify(body),
   })
   if (!res.ok) throw new Error(`Send message failed: ${res.status}`)
   return res.json()

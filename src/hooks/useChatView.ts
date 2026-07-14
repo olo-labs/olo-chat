@@ -29,6 +29,7 @@ export function useChatView({ tenantId, newChatTrigger = 0, chatProfiles }: UseC
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [input, setInput] = useState('')
+  const [selectedRagSource, setSelectedRagSource] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const sessionsApi = useChatSessions(tenantId, chatProfiles)
@@ -62,6 +63,7 @@ export function useChatView({ tenantId, newChatTrigger = 0, chatProfiles }: UseC
   const { handleSend, handleResend } = useChatMessaging({
     sessionId,
     sending,
+    selectedRagSource,
     setSending,
     setError,
     setMessages,
@@ -164,6 +166,8 @@ export function useChatView({ tenantId, newChatTrigger = 0, chatProfiles }: UseC
     error,
     input,
     setInput,
+    selectedRagSource,
+    setSelectedRagSource,
     chatProfiles,
     selectedProfile,
     selectedProfileId,

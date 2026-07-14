@@ -52,6 +52,8 @@ Feature flags: `config/features.ts` (chat, knowledge, documents).
 |--------|-------------|
 | **Header** | “Chat” / “→ Conversation with Olo AI”. |
 | **Preset pill** | `<select>` beside composer: emoji + display name; tooltip from `displaySummary`. **Required** — empty `chatProfiles` shows blocking error. |
+| **RAG source pill** | Second `<select>` beside preset: "No RAG" + indexed knowledge sources from `GET /api/knowledge/sources`. Sent as optional `capabilitySource` on send. |
+| **Cancel run** | **Cancel** button in `ChatWaitingBanner` while a run is active (`POST /api/runs/{runId}/cancel`). |
 | **Thinking** | “{displayName} is thinking…” + `displaySummary` while run active. |
 | **Config pills** | Per `runId` on user/assistant bubbles; persisted in `sessionStorage`. |
 | **Run again** | Under user messages; menu of other presets with `runAgain: true`. |
@@ -62,7 +64,7 @@ Feature flags: `config/features.ts` (chat, knowledge, documents).
 
 ### Knowledge / Documents
 
-- **Knowledge** — Placeholder lists and views.
+- **Knowledge** — **Sources** list (`KnowledgeSourcesList`), **Create** ingest form (`KnowledgeCreateView` → `POST /api/rag/ingest`), **Status** view (`KnowledgeStatusView`). Chat composer includes an optional **Knowledge source (RAG)** dropdown; selected source is sent as `capabilitySource` on message send.
 - **Documents** — Capability source filter, upload modal, table; `POST /api/resource/upload`.
 
 ---
@@ -74,7 +76,7 @@ Feature flags: `config/features.ts` (chat, knowledge, documents).
 | **New chat** | `POST /api/sessions` with `{ tenantId }`; clears run events store. |
 | **Sessions list** | Tenant-wide (`GET .../sessions` without queue filter). Edit title (✎), delete (×). |
 | **Delete all** | `DELETE .../sessions?queue=&pipeline=` using **current preset** queue and pipeline. |
-| **Knowledge** | Sources list placeholder when section is Knowledge. |
+| **Knowledge** | Live sources list (`KnowledgeSourcesList`) when section is Knowledge. |
 
 Hidden for Documents section.
 

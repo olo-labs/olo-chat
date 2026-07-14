@@ -89,8 +89,9 @@ Last 25 events from `runEventsStore`; hydrate + dedupe from `localStorage`.
 
 ### 4.1 Base URL
 
-- **`VITE_API_BASE`** — e.g. `http://localhost:7080`; paths are `{base}/api/...`.
+- **`VITE_API_BASE`** — e.g. `http://localhost:7080`; paths are `{base}/api/...`. When empty, the app uses same-origin `/api`.
 - **Dev proxy** — `vite.config.ts` proxies `/api` to port 7080 when `VITE_API_BASE` is unset.
+- **Docker/production** — nginx serves static `dist` and proxies `/api` and `/ws` to `OLO_BACKEND_URL` (default `http://olo:7080`). See [DOCKER.md](./DOCKER.md).
 - **Auth** — Optional Bearer token (`getApiAuthHeaders`, `wsUrl.ts`).
 
 ### 4.2 REST

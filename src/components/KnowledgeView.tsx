@@ -6,29 +6,26 @@
 /**
  * Main content for Knowledge section. Sub-options: sources (list in second panel), create (create new), status (indexed, processing).
  */
+import { KnowledgeCreateView } from './KnowledgeCreateView'
+import { KnowledgeStatusView } from './KnowledgeStatusView'
+
 export interface KnowledgeViewProps {
   subId: string
 }
 
 export function KnowledgeView({ subId }: KnowledgeViewProps) {
   if (subId === 'create') {
-    return (
-      <div className="knowledge-view knowledge-view-create">
-        <p className="knowledge-view-description">Create a new knowledge source. (Form placeholder — wire to API.)</p>
-      </div>
-    )
+    return <KnowledgeCreateView />
   }
   if (subId === 'status') {
-    return (
-      <div className="knowledge-view knowledge-view-status">
-        <p className="knowledge-view-description">Status: indexed, processing. (Placeholder — wire to API.)</p>
-      </div>
-    )
+    return <KnowledgeStatusView />
   }
   return (
     <div className="knowledge-view knowledge-view-sources">
       <p className="knowledge-view-description">
-        Select a knowledge source from the list in the second panel, or use <strong>Create new</strong> to add one.
+        Select a knowledge source from the list in the second panel, or use <strong>Create new</strong>{' '}
+        to index uploaded documents into the vector store via the <strong>documents-index</strong>{' '}
+        workflow.
       </p>
     </div>
   )

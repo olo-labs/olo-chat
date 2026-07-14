@@ -61,13 +61,17 @@ Set **`OLO_CONFIGURATION_DIR`** on the backend (see `olo/start.bat` and `olo/.en
 | List tenants | `GET /api/tenants` | Optional; not a chat tenant picker. |
 | List sessions | `GET /api/tenants/{tenantId}/sessions` | Tenant-wide (no queue filter in current UI). |
 | Create session | `POST /api/sessions` | Body: `{ "tenantId" }`. |
-| Send message | `POST /api/sessions/{sessionId}/messages` | `{ "content", "taskQueue" }` from selected preset. |
+| Send message | `POST /api/sessions/{sessionId}/messages` | `{ "content", "taskQueue" }` from selected preset; optional `capabilitySource` for RAG. |
+| Cancel run | `POST /api/runs/{runId}/cancel` | Signals Temporal cancellation while run is active. |
+| Knowledge sources | `GET /api/knowledge/sources` | Lists indexed RAG sources for composer dropdown and Knowledge panel. |
+| RAG ingest | `POST /api/rag/ingest` | Start knowledge indexing workflow. |
+| List documents | `GET /api/documents?capabilitySource=` | Indexed document status per source. |
 | List messages | `GET /api/sessions/{sessionId}/messages` | History when opening a session. |
 | Run events (SSE) | `GET /api/runs/{runId}/events` | Catch-up + live `OloExecutionEvent` stream. |
 | Run response | `GET /api/runs/{runId}/response` | Final assistant text. |
 | Run status | `GET /api/runs/{runId}` | Polled on completion. |
 | WebSocket | `ws(s)://.../ws` | `SUBSCRIBE_RUN` for run events; PING/PONG for liveness. |
-| Human input | `POST /api/runs/{runId}/human-input` | `{ "approved", "message" }`. Plugin forms send `message` as JSON keyed by parameter ids; see [human input widgets](#human-input-plugin-forms). |
+| Human input | `POST /api/runs/{runId}/human-input` | `{ "approved", "message" }`; optional `historyText`. Plugin forms send `message` as JSON keyed by parameter ids; see [human input widgets](#human-input-plugin-forms). |
 | Delete session | `DELETE /api/sessions/{sessionId}` | Optimistic UI removal. |
 | Delete all | `DELETE /api/tenants/{tenantId}/sessions?queue=&pipeline=` | Scoped to **current preset** queue + pipeline. |
 

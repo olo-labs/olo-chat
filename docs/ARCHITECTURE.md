@@ -42,7 +42,9 @@ SPA; backend is source of truth for sessions, messages, runs, and execution even
 | **runEvents** | `runEventsStore` | Current run events (SSE/WebSocket). **ChatView** reads `s.events` as the single timeline source. Persist last 200 non-liveness events; dedupe on replay; hydrate from `localStorage`. |
 | **conversationPanel** | `conversationPanelStore` | **selectedProfileId**, **selectedQueueId**, **selectedPipelineId** from the active chat preset. |
 | **sessionDisplay** | `sessionDisplayStore` | Custom titles and first-message previews (persisted, max 80). |
-| **tenantConfig** | `tenantConfigStore` | Tenant list from `GET /api/tenants`. Config form exists but nav is disabled (`isTenantConfig = false` in `App.tsx`). |
+| **knowledgeIngest** | `knowledgeIngestStore` | RAG ingest job state (Knowledge section). |
+| **documentUploads** | `documentUploadsStore` | Documents upload queue and status. |
+| **tenantConfig** | `tenantConfigStore` | Tenant list from `GET /api/tenants`. Config form exists but nav is disabled. |
 
 ---
 
@@ -50,7 +52,12 @@ SPA; backend is source of truth for sessions, messages, runs, and execution even
 
 | Module | Purpose |
 |--------|---------|
-| **chatApi** | `GET /api/health`, **`GET /api/ui/context`** (`chatProfiles`), `GET /api/tenants`, sessions, messages, runs (SSE, response, human-input). |
+| **chatApi** | Re-exports from split modules below. |
+| **chatContextApi** | `GET /api/health`, `GET /api/ui/context` (`chatProfiles`). |
+| **chatSessionsApi** | Sessions, messages (optional `capabilitySource` on send). |
+| **chatRunsApi** | Runs: SSE events, response, status, cancel, human-input. |
+| **chatSseApi** | SSE stream helpers. |
+| **ragIngestApi** | `POST /api/rag/ingest`, `GET /api/knowledge/sources`, `GET /api/documents`. |
 | **documentsUploadApi** | `POST /api/resource/upload`. |
 | **rest** | Tenant CRUD at `/api/v1/tenants` (orphaned from main chat flow). |
 
@@ -92,7 +99,7 @@ App
     ├── ToolsPanel (New chat + sessions; no queue/pipeline dropdowns)
     ├── MainContent
     │   ├── ChatView (preset select, messages, composer, progress strip)
-    │   ├── KnowledgeView (placeholder)
+    │   ├── KnowledgeView (Sources / Create / Status + RAG sources list)
     │   └── DocumentsUploadView
     └── PropertiesPanel
         └── EventsList
