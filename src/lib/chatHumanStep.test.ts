@@ -56,9 +56,11 @@ describe('resolveHumanStepAssistantDisplay', () => {
     const messages = [
       {
         messageId: 'a1',
+        sessionId: 'session-1',
         role: 'assistant',
         content: 'User Input Step: Approve container restart\nApprove\nCancel',
         runId: 'run-1',
+        createdAt: 1,
       },
       { messageId: 'u1', sessionId: 'session-1', role: 'user', content: 'Approve', runId: 'run-1', createdAt: 2 },
     ] as const
