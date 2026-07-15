@@ -60,7 +60,7 @@ describe('resolveHumanStepAssistantDisplay', () => {
         content: 'User Input Step: Approve container restart\nApprove\nCancel',
         runId: 'run-1',
       },
-      { messageId: 'u1', role: 'user', content: 'Approve', runId: 'run-1' },
+      { messageId: 'u1', sessionId: 'session-1', role: 'user', content: 'Approve', runId: 'run-1', createdAt: 2 },
     ] as const
     expect(resolveHumanStepAssistantDisplay([...messages], 0, messages[0].content)).toBe(
       'User Input Step: Approve container restart\nApprove'

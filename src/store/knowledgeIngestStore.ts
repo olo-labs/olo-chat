@@ -26,8 +26,12 @@ interface KnowledgeIngestState {
   patchRunFromEvent: (id: string, event: RunEventDto) => void
 }
 
+function eventPayload(event: RunEventDto): Record<string, unknown> | undefined {
+  return event.output ?? event.metadata ?? event.input
+}
+
 function eventText(event: RunEventDto): string {
-  const payload = event.payload as Record<string, unknown> | undefined
+  const payload = eventPayload(event)
   if (payload && typeof payload.message === 'string') return payload.message
   if (payload && typeof payload.text === 'string') return payload.text
   return event.eventType ?? ''
@@ -52,7 +56,7 @@ export const knowledgeIngestStore = create<KnowledgeIngestState>((set) => ({
         if (r.id !== id) return r
         const type = (event.eventType ?? '').toUpperCase()
         const text = eventText(event)
-        const payload = event.payload as Record<string, unknown> | undefined
+        const payload = eventPayload(event)
 
         if (type.includes('FAILED') || type.includes('ERROR')) {
           return { ...r, status: 'failed', message: text || r.message }

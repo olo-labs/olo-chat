@@ -94,7 +94,7 @@ export function computeChatAssistantDisplay({
 
   const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null
   const lastMessageIsAssistant =
-    lastMsg?.role === 'assistant' && resolveAssistantBubbleText(lastMsg) != null
+    lastMsg?.role === 'assistant' && resolveAssistantBubbleText(lastMsg, messages.length - 1) != null
   const showInlineAssistant = inlineAssistantText != null && !lastMessageIsAssistant
   const inlineAssistantRunId = runEvents[0]?.runId ?? lastOutboundRunId ?? ''
   const inlineAssistantProfile = inlineAssistantRunId ? profileByRunId[inlineAssistantRunId] : undefined
