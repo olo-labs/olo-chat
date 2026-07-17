@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   getKnowledgeSourceTypeOptions,
   knowledgeSourceTypeLabel,
-  listKnowledgeSources,
+  listKnowledgeSourceCollections,
   type KnowledgeSourceDto,
 } from '../api/ragIngestApi'
 import { knowledgeIngestStore } from '../store/knowledgeIngestStore'
@@ -25,7 +25,7 @@ export function KnowledgeSourcesList() {
 
   const refresh = useCallback(async () => {
     setLoading(true)
-    const list = await listKnowledgeSources()
+    const list = await listKnowledgeSourceCollections()
     setSources(list)
     setLoading(false)
   }, [])

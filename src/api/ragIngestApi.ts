@@ -8,7 +8,8 @@
  *
  * Endpoints:
  * - POST /api/rag/ingest - start documents-index Temporal workflow
- * - GET /api/knowledge/sources - source collections with file counts
+ * - GET /api/knowledge/sources - executed knowledge sources with status
+ * - GET /api/knowledge/source-collections - source collections with file counts
  * - GET /api/documents?capabilitySource= - files for a source folder
  */
 
@@ -36,6 +37,13 @@ export interface KnowledgeSourceDto {
   displayName: string
   description?: string
   status?: 'in_progress' | 'success' | 'failed' | 'unknown'
+  message?: string
+  runId?: string
+  sourceCollection?: string
+  createdAt?: number
+  updatedAt?: number
+  pipeline?: string
+  taskQueue?: string
 }
 
 export interface UploadedDocumentDto {
@@ -113,6 +121,13 @@ export function normalizeKnowledgeSource(raw: unknown): KnowledgeSourceDto | nul
     description: asString(item.description),
     fileCount,
     files: Array.isArray(item.files) ? (item.files as UploadedDocumentDto[]) : undefined,
+    message: asString(item.message),
+    runId: asString(item.runId),
+    sourceCollection: asString(item.sourceCollection),
+    createdAt: asNumber(item.createdAt),
+    updatedAt: asNumber(item.updatedAt),
+    pipeline: asString(item.pipeline),
+    taskQueue: asString(item.taskQueue),
     status:
       status === 'in_progress' || status === 'success' || status === 'failed' || status === 'unknown'
         ? status
@@ -205,6 +220,24 @@ export async function startRagIngest(req: RagIngestRequest): Promise<RagIngestRe
 export async function listKnowledgeSources(): Promise<KnowledgeSourceDto[]> {
   try {
     const res = await fetch(`${API}/knowledge/sources`, {
+      headers: getApiAuthHeaders(),
+    })
+    if (!res.ok) return []
+    const data = parseJson<unknown>(await res.text())
+    const list = Array.isArray(data)
+      ? data
+      : data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>).sources)
+        ? ((data as Record<string, unknown>).sources as unknown[])
+        : []
+    return list.map(normalizeKnowledgeSource).filter((s): s is KnowledgeSourceDto => Boolean(s))
+  } catch {
+    return []
+  }
+}
+
+export async function listKnowledgeSourceCollections(): Promise<KnowledgeSourceDto[]> {
+  try {
+    const res = await fetch(`${API}/knowledge/source-collections`, {
       headers: getApiAuthHeaders(),
     })
     if (!res.ok) return []

@@ -9,6 +9,7 @@ import {
   FILES_KNOWLEDGE_SOURCE_TYPE,
   getKnowledgeSourceTypeOptions,
   knowledgeSourceTypeLabel,
+  listKnowledgeSourceCollections,
   listKnowledgeSources,
   listUploadedDocuments,
   startRagIngest,
@@ -29,6 +30,7 @@ function sourceFromId(id: string): KnowledgeSourceDto {
 export function KnowledgeCreateView() {
   const envSources = useMemo(() => getConfiguredCapabilitySources().map(sourceFromId), [])
   const [apiSources, setApiSources] = useState<KnowledgeSourceDto[]>([])
+  const [existingKnowledgeSources, setExistingKnowledgeSources] = useState<KnowledgeSourceDto[]>([])
   const [selectedType, setSelectedType] = useState(FILES_KNOWLEDGE_SOURCE_TYPE)
   const [selectedSource, setSelectedSource] = useState('')
   const [knowledgeName, setKnowledgeName] = useState('')
@@ -68,7 +70,7 @@ export function KnowledgeCreateView() {
   )
   const existingKnowledgeNames = useMemo(() => {
     const names = new Set<string>()
-    for (const source of sourceOptions) {
+    for (const source of existingKnowledgeSources) {
       if (source.displayName.trim()) names.add(source.displayName.trim())
       if (source.capabilitySource.trim()) names.add(source.capabilitySource.trim())
     }
@@ -76,13 +78,17 @@ export function KnowledgeCreateView() {
       if (run.knowledgeName.trim()) names.add(run.knowledgeName.trim())
     }
     return [...names].sort((a, b) => a.localeCompare(b))
-  }, [ingestRuns, sourceOptions])
+  }, [existingKnowledgeSources, ingestRuns])
   const effectiveSource = selectedSource.trim()
   const finalKnowledgeName = knowledgeName.trim()
 
   const refreshSources = useCallback(async () => {
-    const sources = await listKnowledgeSources()
-    setApiSources(sources)
+    const [collections, knowledgeSources] = await Promise.all([
+      listKnowledgeSourceCollections(),
+      listKnowledgeSources(),
+    ])
+    setApiSources(collections)
+    setExistingKnowledgeSources(knowledgeSources)
   }, [])
 
   useEffect(() => {

@@ -3,22 +3,62 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useMemo } from 'react'
-import { knowledgeSourceTypeLabel } from '../api/ragIngestApi'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  knowledgeSourceTypeLabel,
+  listKnowledgeSources,
+  type KnowledgeSourceDto,
+} from '../api/ragIngestApi'
 import {
   knowledgeIngestStore,
   knowledgeStatusLabel,
   type KnowledgeIngestRun,
 } from '../store/knowledgeIngestStore'
 
+function sourceStatusLabel(source: KnowledgeSourceDto): string {
+  if (source.status === 'success') return 'Success'
+  if (source.status === 'failed') return 'Failed'
+  if (source.status === 'in_progress') return 'In progress'
+  return 'Unknown'
+}
+
 export function KnowledgeStatusView() {
   const runs = knowledgeIngestStore((s) => s.runs)
+  const [executedSources, setExecutedSources] = useState<KnowledgeSourceDto[]>([])
+  const [loadingSources, setLoadingSources] = useState(true)
   const activeRuns = runs.filter((r) => r.status === 'in_progress' || r.status === 'pending')
   const completedRuns = runs.filter((r) => r.status === 'success' || r.status === 'failed')
-  const executedRuns = useMemo(
-    () => [...runs].sort((a, b) => b.createdAt - a.createdAt),
+  const runStatusSignature = useMemo(
+    () => runs.map((run) => `${run.runId ?? run.id}:${run.status}:${run.message ?? ''}`).join('|'),
     [runs]
   )
+
+  const refreshSources = useCallback(async () => {
+    setLoadingSources(true)
+    const list = await listKnowledgeSources()
+    setExecutedSources(list)
+    setLoadingSources(false)
+  }, [])
+
+  useEffect(() => {
+    void refreshSources()
+  }, [refreshSources, runStatusSignature])
+
+  useEffect(() => {
+    const hasActiveBackendSource = executedSources.some((source) => source.status === 'in_progress')
+    if (!hasActiveBackendSource && activeRuns.length === 0) return
+    const timer = window.setInterval(() => {
+      void refreshSources()
+    }, 5000)
+    return () => window.clearInterval(timer)
+  }, [activeRuns.length, executedSources, refreshSources])
+
+  const localFallbackRuns = useMemo(() => {
+    const backendRunIds = new Set(executedSources.map((source) => source.runId).filter(Boolean))
+    return [...runs]
+      .filter((run) => !run.runId || !backendRunIds.has(run.runId))
+      .sort((a, b) => b.createdAt - a.createdAt)
+  }, [executedSources, runs])
 
   return (
     <div className="knowledge-view knowledge-view-status">
@@ -66,12 +106,38 @@ export function KnowledgeStatusView() {
       <section className="knowledge-status-section">
         <div className="knowledge-files-header">
           <h3 className="knowledge-runs-title">Executed knowledge sources</h3>
+          <button type="button" className="knowledge-link-btn" onClick={() => void refreshSources()}>
+            Refresh
+          </button>
         </div>
-        {executedRuns.length === 0 ? (
-          <p className="knowledge-empty">No knowledge creation jobs have been executed in this session.</p>
+        {loadingSources ? (
+          <p className="knowledge-empty">Loading executed knowledge sources...</p>
+        ) : executedSources.length === 0 && localFallbackRuns.length === 0 ? (
+          <p className="knowledge-empty">No knowledge creation jobs have been executed yet.</p>
         ) : (
           <ul className="knowledge-sources-server-list">
-            {executedRuns.map((run: KnowledgeIngestRun) => (
+            {executedSources.map((source) => (
+              <li
+                key={source.runId ?? `${source.sourceType}:${source.capabilitySource}`}
+                className={`knowledge-source-row knowledge-run-${source.status ?? 'unknown'}`}
+              >
+                <span className="knowledge-run-source">{source.displayName}</span>
+                <span className="knowledge-run-type">{knowledgeSourceTypeLabel(source.sourceType)}</span>
+                <span className="knowledge-run-files">{source.fileCount} file(s)</span>
+                <span className="knowledge-run-status">{sourceStatusLabel(source)}</span>
+                {source.sourceCollection ? (
+                  <span className="knowledge-run-message">from {source.sourceCollection}</span>
+                ) : source.message ? (
+                  <span className="knowledge-run-message">{source.message}</span>
+                ) : null}
+                {source.runId ? (
+                  <span className="knowledge-run-id" title={source.runId}>
+                    run: {source.runId.slice(0, 8)}...
+                  </span>
+                ) : null}
+              </li>
+            ))}
+            {localFallbackRuns.map((run: KnowledgeIngestRun) => (
               <li key={run.id} className={`knowledge-source-row knowledge-run-${run.status}`}>
                 <span className="knowledge-run-source">{run.knowledgeName}</span>
                 <span className="knowledge-run-type">{knowledgeSourceTypeLabel(run.sourceType)}</span>
