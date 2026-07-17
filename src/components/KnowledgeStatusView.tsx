@@ -3,62 +3,22 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import {
-  FILES_KNOWLEDGE_SOURCE_TYPE,
-  knowledgeSourceTypeLabel,
-  listKnowledgeSources,
-  type KnowledgeSourceDto,
-} from '../api/ragIngestApi'
+import { useMemo } from 'react'
+import { knowledgeSourceTypeLabel } from '../api/ragIngestApi'
 import {
   knowledgeIngestStore,
   knowledgeStatusLabel,
   type KnowledgeIngestRun,
 } from '../store/knowledgeIngestStore'
 
-function sourceFromRun(run: KnowledgeIngestRun): KnowledgeSourceDto {
-  return {
-    capabilitySource: run.knowledgeName || run.capabilitySource,
-    displayName: run.knowledgeName || run.capabilitySource,
-    sourceType: run.sourceType || FILES_KNOWLEDGE_SOURCE_TYPE,
-    fileCount: run.fileNames.length,
-    status: run.status === 'success' ? 'success' : run.status === 'failed' ? 'failed' : 'in_progress',
-    description: run.capabilitySource,
-  }
-}
-
 export function KnowledgeStatusView() {
   const runs = knowledgeIngestStore((s) => s.runs)
-  const [sources, setSources] = useState<KnowledgeSourceDto[]>([])
-  const [loading, setLoading] = useState(true)
-
-  const refresh = useCallback(async () => {
-    setLoading(true)
-    const list = await listKnowledgeSources()
-    setSources(list)
-    setLoading(false)
-  }, [])
-
-  useEffect(() => {
-    void refresh()
-  }, [refresh, runs])
-
   const activeRuns = runs.filter((r) => r.status === 'in_progress' || r.status === 'pending')
   const completedRuns = runs.filter((r) => r.status === 'success' || r.status === 'failed')
-  const visibleSources = useMemo(() => {
-    const map = new Map<string, KnowledgeSourceDto>()
-    for (const src of sources) {
-      map.set(`${src.sourceType}:${src.capabilitySource}`, src)
-    }
-    for (const run of runs) {
-      if (run.status !== 'success' && run.status !== 'failed') continue
-      const source = sourceFromRun(run)
-      map.set(`${source.sourceType}:${source.capabilitySource}`, source)
-    }
-    return [...map.values()].sort((a, b) =>
-      `${a.sourceType}:${a.displayName}`.localeCompare(`${b.sourceType}:${b.displayName}`)
-    )
-  }, [runs, sources])
+  const executedRuns = useMemo(
+    () => [...runs].sort((a, b) => b.createdAt - a.createdAt),
+    [runs]
+  )
 
   return (
     <div className="knowledge-view knowledge-view-status">
@@ -105,23 +65,24 @@ export function KnowledgeStatusView() {
 
       <section className="knowledge-status-section">
         <div className="knowledge-files-header">
-          <h3 className="knowledge-runs-title">Knowledge sources</h3>
-          <button type="button" className="knowledge-link-btn" onClick={() => void refresh()}>
-            Refresh
-          </button>
+          <h3 className="knowledge-runs-title">Executed knowledge sources</h3>
         </div>
-        {loading ? (
-          <p className="knowledge-empty">Loading sources...</p>
-        ) : visibleSources.length === 0 ? (
-          <p className="knowledge-empty">No knowledge source collections available yet.</p>
+        {executedRuns.length === 0 ? (
+          <p className="knowledge-empty">No knowledge creation jobs have been executed in this session.</p>
         ) : (
           <ul className="knowledge-sources-server-list">
-            {visibleSources.map((src) => (
-              <li key={`${src.sourceType}:${src.capabilitySource}`} className="knowledge-source-row">
-                <span className="knowledge-run-source">{src.displayName}</span>
-                <span className="knowledge-run-type">{knowledgeSourceTypeLabel(src.sourceType)}</span>
-                <span className="knowledge-run-files">{src.fileCount} file(s)</span>
-                {src.status ? <span className="knowledge-run-status">{src.status}</span> : null}
+            {executedRuns.map((run: KnowledgeIngestRun) => (
+              <li key={run.id} className={`knowledge-source-row knowledge-run-${run.status}`}>
+                <span className="knowledge-run-source">{run.knowledgeName}</span>
+                <span className="knowledge-run-type">{knowledgeSourceTypeLabel(run.sourceType)}</span>
+                <span className="knowledge-run-files">{run.fileNames.length} file(s)</span>
+                <span className="knowledge-run-status">{knowledgeStatusLabel(run.status)}</span>
+                <span className="knowledge-run-message">from {run.capabilitySource}</span>
+                {run.runId ? (
+                  <span className="knowledge-run-id" title={run.runId}>
+                    run: {run.runId.slice(0, 8)}...
+                  </span>
+                ) : null}
               </li>
             ))}
           </ul>
