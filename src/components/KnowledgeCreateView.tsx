@@ -6,19 +6,33 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getConfiguredCapabilitySources } from '../api/documentsUploadApi'
 import {
+  FILES_KNOWLEDGE_SOURCE_TYPE,
+  getKnowledgeSourceTypeOptions,
+  knowledgeSourceTypeLabel,
   listKnowledgeSources,
   listUploadedDocuments,
   startRagIngest,
+  type KnowledgeSourceDto,
   type UploadedDocumentDto,
 } from '../api/ragIngestApi'
-import { knowledgeIngestStore } from '../store/knowledgeIngestStore'
+import { knowledgeIngestStore, knowledgeStatusLabel } from '../store/knowledgeIngestStore'
 import { KnowledgeIngestRunTracker } from './KnowledgeIngestRunTracker'
 
+function sourceFromId(id: string): KnowledgeSourceDto {
+  return {
+    capabilitySource: id,
+    displayName: id,
+    sourceType: FILES_KNOWLEDGE_SOURCE_TYPE,
+    fileCount: 0,
+  }
+}
+
 export function KnowledgeCreateView() {
-  const envSources = useMemo(() => getConfiguredCapabilitySources(), [])
-  const [apiSources, setApiSources] = useState<string[]>([])
+  const envSources = useMemo(() => getConfiguredCapabilitySources().map(sourceFromId), [])
+  const [apiSources, setApiSources] = useState<KnowledgeSourceDto[]>([])
+  const [selectedType, setSelectedType] = useState(FILES_KNOWLEDGE_SOURCE_TYPE)
   const [selectedSource, setSelectedSource] = useState('')
-  const [customSource, setCustomSource] = useState('')
+  const [knowledgeName, setKnowledgeName] = useState('')
   const [documents, setDocuments] = useState<UploadedDocumentDto[]>([])
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set())
   const [loadingDocs, setLoadingDocs] = useState(false)
@@ -29,18 +43,47 @@ export function KnowledgeCreateView() {
   const addRun = knowledgeIngestStore((s) => s.addRun)
   const updateRun = knowledgeIngestStore((s) => s.updateRun)
 
-  const mergedSources = useMemo(() => {
-    const fromRuns = ingestRuns.map((r) => r.capabilitySource)
-    return [...new Set([...envSources, ...apiSources, ...fromRuns])].sort((a, b) =>
-      a.localeCompare(b)
+  const sourceOptions = useMemo(() => {
+    const map = new Map<string, KnowledgeSourceDto>()
+    for (const source of [...envSources, ...apiSources]) {
+      map.set(`${source.sourceType}:${source.capabilitySource}`, source)
+    }
+    for (const run of ingestRuns) {
+      map.set(`${run.sourceType}:${run.capabilitySource}`, {
+        capabilitySource: run.capabilitySource,
+        sourceType: run.sourceType,
+        displayName: run.capabilitySource,
+        fileCount: run.fileNames.length,
+        status: run.status === 'failed' ? 'failed' : run.status === 'success' ? 'success' : 'in_progress',
+      })
+    }
+    return [...map.values()].sort((a, b) =>
+      `${a.sourceType}:${a.displayName}`.localeCompare(`${b.sourceType}:${b.displayName}`)
     )
-  }, [envSources, apiSources, ingestRuns])
+  }, [apiSources, envSources, ingestRuns])
 
-  const effectiveSource = (customSource.trim() || selectedSource).trim()
+  const typeOptions = useMemo(() => getKnowledgeSourceTypeOptions(sourceOptions), [sourceOptions])
+  const filteredSources = useMemo(
+    () => sourceOptions.filter((s) => s.sourceType === selectedType),
+    [sourceOptions, selectedType]
+  )
+  const existingKnowledgeNames = useMemo(() => {
+    const names = new Set<string>()
+    for (const source of sourceOptions) {
+      if (source.displayName.trim()) names.add(source.displayName.trim())
+      if (source.capabilitySource.trim()) names.add(source.capabilitySource.trim())
+    }
+    for (const run of ingestRuns) {
+      if (run.knowledgeName.trim()) names.add(run.knowledgeName.trim())
+    }
+    return [...names].sort((a, b) => a.localeCompare(b))
+  }, [ingestRuns, sourceOptions])
+  const effectiveSource = selectedSource.trim()
+  const finalKnowledgeName = knowledgeName.trim()
 
   const refreshSources = useCallback(async () => {
     const sources = await listKnowledgeSources()
-    setApiSources(sources.map((s) => s.capabilitySource).filter(Boolean))
+    setApiSources(sources)
   }, [])
 
   useEffect(() => {
@@ -48,21 +91,27 @@ export function KnowledgeCreateView() {
   }, [refreshSources])
 
   useEffect(() => {
-    if (!selectedSource && mergedSources.length > 0) {
-      setSelectedSource(mergedSources[0])
+    if (!typeOptions.some((type) => type.id === selectedType)) {
+      setSelectedType(typeOptions[0]?.id ?? FILES_KNOWLEDGE_SOURCE_TYPE)
     }
-  }, [mergedSources, selectedSource])
+  }, [selectedType, typeOptions])
 
   useEffect(() => {
-    const src = effectiveSource
-    if (!src) {
+    if (!filteredSources.some((source) => source.capabilitySource === selectedSource)) {
+      const next = filteredSources[0]?.capabilitySource ?? ''
+      setSelectedSource(next)
+    }
+  }, [filteredSources, selectedSource])
+
+  useEffect(() => {
+    if (!effectiveSource) {
       setDocuments([])
       setSelectedFiles(new Set())
       return
     }
     let cancelled = false
     setLoadingDocs(true)
-    void listUploadedDocuments(src).then((files) => {
+    void listUploadedDocuments(effectiveSource).then((files) => {
       if (cancelled) return
       setDocuments(files)
       setSelectedFiles(new Set(files.map((f) => f.fileName)))
@@ -84,9 +133,16 @@ export function KnowledgeCreateView() {
 
   const handleStartIngest = async () => {
     setError(null)
-    const src = effectiveSource
-    if (!src) {
-      setError('Select or enter a capability source.')
+    if (!selectedType) {
+      setError('Select a knowledge source type.')
+      return
+    }
+    if (!effectiveSource) {
+      setError('Select a knowledge source.')
+      return
+    }
+    if (!finalKnowledgeName) {
+      setError('Enter a final knowledge source name.')
       return
     }
     const fileNames = [...selectedFiles]
@@ -98,15 +154,23 @@ export function KnowledgeCreateView() {
     const rowId = crypto.randomUUID()
     addRun({
       id: rowId,
-      capabilitySource: src,
+      sourceType: selectedType,
+      capabilitySource: effectiveSource,
+      knowledgeName: finalKnowledgeName,
       fileNames,
       status: 'pending',
+      message: 'Waiting to start',
       createdAt: Date.now(),
     })
 
     setSubmitting(true)
     try {
-      const result = await startRagIngest({ capabilitySource: src, fileNames })
+      const result = await startRagIngest({
+        sourceType: selectedType,
+        capabilitySource: effectiveSource,
+        knowledgeName: finalKnowledgeName,
+        fileNames,
+      })
       if (!result.success) {
         updateRun(rowId, { status: 'failed', message: result.message ?? 'Ingest failed' })
         setError(result.message ?? 'Ingest failed')
@@ -114,8 +178,9 @@ export function KnowledgeCreateView() {
       }
       updateRun(rowId, {
         runId: result.runId,
-        status: 'processing',
-        message: 'Indexing started…',
+        status: 'in_progress',
+        knowledgeName: result.knowledgeName ?? finalKnowledgeName,
+        message: result.runId ? 'Indexing in progress' : 'Indexing request accepted',
       })
       void refreshSources()
     } finally {
@@ -126,46 +191,73 @@ export function KnowledgeCreateView() {
   return (
     <div className="knowledge-view knowledge-view-create">
       <p className="knowledge-view-description">
-        Select uploaded documents for a capability source, then start a{' '}
-        <strong>documents-index</strong> workflow run. The RAG ingest plugin chunks files and writes
-        vector entries using the vector store configured on the workflow node in olo-ui.
+        Choose a source type, select a source collection, name the final tokenized knowledge source,
+        then pick files from that source folder to index.
       </p>
 
       <div className="knowledge-form">
         <label className="knowledge-field">
-          <span className="knowledge-field-label">Capability source</span>
+          <span className="knowledge-field-label">Knowledge source type</span>
           <select
             className="knowledge-field-input"
-            value={selectedSource}
+            value={selectedType}
             onChange={(e) => {
-              setSelectedSource(e.target.value)
-              setCustomSource('')
+              setSelectedType(e.target.value)
+              setSelectedSource('')
+              setKnowledgeName('')
             }}
           >
-            <option value="">Select…</option>
-            {mergedSources.map((s) => (
-              <option key={s} value={s}>
-                {s}
+            {typeOptions.map((type) => (
+              <option key={type.id} value={type.id}>
+                {type.label}
               </option>
             ))}
           </select>
         </label>
 
         <label className="knowledge-field">
-          <span className="knowledge-field-label">Or enter new source id</span>
+          <span className="knowledge-field-label">Knowledge source</span>
+          <select
+            className="knowledge-field-input"
+            value={selectedSource}
+            onChange={(e) => {
+              setSelectedSource(e.target.value)
+            }}
+          >
+            <option value="">Select a {knowledgeSourceTypeLabel(selectedType).toLowerCase()} source</option>
+            {filteredSources.map((source) => (
+              <option key={`${source.sourceType}:${source.capabilitySource}`} value={source.capabilitySource}>
+                {source.displayName}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="knowledge-field">
+          <span className="knowledge-field-label">Final knowledge source name</span>
           <input
             className="knowledge-field-input"
             type="text"
-            placeholder="e.g. finance-rag"
-            value={customSource}
-            onChange={(e) => setCustomSource(e.target.value)}
+            list="knowledge-name-options"
+            placeholder="Enter a new name, e.g. product-docs-rag"
+            value={knowledgeName}
+            onChange={(e) => setKnowledgeName(e.target.value)}
           />
+          <datalist id="knowledge-name-options">
+            {existingKnowledgeNames.map((name) => (
+              <option key={name} value={name} />
+            ))}
+          </datalist>
+          <span className="knowledge-field-hint">
+            Choose an existing name from the dropdown or type a new one. This is separate from the
+            selected document collection.
+          </span>
         </label>
 
         <div className="knowledge-files-panel">
           <div className="knowledge-files-header">
-            <span className="knowledge-field-label">Uploaded files</span>
-            {effectiveSource ? (
+            <span className="knowledge-field-label">Files in selected source folder</span>
+            {effectiveSource && documents.length > 0 ? (
               <button
                 type="button"
                 className="knowledge-link-btn"
@@ -178,14 +270,12 @@ export function KnowledgeCreateView() {
             ) : null}
           </div>
 
-          {!effectiveSource && (
-            <p className="knowledge-empty">Choose a capability source to list uploaded files.</p>
-          )}
-          {effectiveSource && loadingDocs && <p className="knowledge-empty">Loading files…</p>}
+          {!effectiveSource && <p className="knowledge-empty">Choose a source to list its files.</p>}
+          {effectiveSource && loadingDocs && <p className="knowledge-empty">Loading files...</p>}
           {effectiveSource && !loadingDocs && documents.length === 0 && (
             <p className="knowledge-empty">
               No files found for <strong>{effectiveSource}</strong>. Upload documents first under{' '}
-              <strong>Documents → Upload</strong>.
+              <strong>Documents / Upload</strong>.
             </p>
           )}
           {effectiveSource && !loadingDocs && documents.length > 0 && (
@@ -216,26 +306,27 @@ export function KnowledgeCreateView() {
         <button
           type="button"
           className="knowledge-primary-btn"
-          disabled={submitting || !effectiveSource || selectedFiles.size === 0}
+          disabled={submitting || !effectiveSource || !finalKnowledgeName || selectedFiles.size === 0}
           onClick={() => void handleStartIngest()}
         >
-          {submitting ? 'Starting…' : 'Create RAG index run'}
+          {submitting ? 'Starting...' : 'Create knowledge'}
         </button>
       </div>
 
       {ingestRuns.length > 0 && (
         <div className="knowledge-runs">
-          <h3 className="knowledge-runs-title">Recent ingest runs</h3>
+          <h3 className="knowledge-runs-title">Recent knowledge jobs</h3>
           <ul className="knowledge-runs-list">
             {ingestRuns.map((run) => (
               <li key={run.id} className={`knowledge-run-row knowledge-run-${run.status}`}>
-                <span className="knowledge-run-source">{run.capabilitySource}</span>
+                <span className="knowledge-run-source">{run.knowledgeName}</span>
+                <span className="knowledge-run-type">{knowledgeSourceTypeLabel(run.sourceType)}</span>
                 <span className="knowledge-run-files">{run.fileNames.length} file(s)</span>
-                <span className="knowledge-run-status">{run.status}</span>
+                <span className="knowledge-run-status">{knowledgeStatusLabel(run.status)}</span>
                 {run.message ? <span className="knowledge-run-message">{run.message}</span> : null}
                 {run.runId ? (
                   <span className="knowledge-run-id" title={run.runId}>
-                    run: {run.runId.slice(0, 8)}…
+                    run: {run.runId.slice(0, 8)}...
                   </span>
                 ) : null}
               </li>
@@ -245,10 +336,11 @@ export function KnowledgeCreateView() {
       )}
 
       {ingestRuns
-        .filter((r) => r.runId && (r.status === 'processing' || r.status === 'pending'))
+        .filter((r) => r.runId && (r.status === 'in_progress' || r.status === 'pending'))
         .map((r) => (
           <KnowledgeIngestRunTracker key={r.id} run={r} />
         ))}
     </div>
   )
 }
+

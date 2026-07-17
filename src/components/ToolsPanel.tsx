@@ -13,7 +13,6 @@ import type { SectionId } from '../types/layout'
 import { getToolsForView, getToolComponent, type ToolContext } from '../config/toolRegistry'
 import type { ChatProfileDto } from '../api/chatApi'
 import { conversationPanelStore } from '../store/conversationPanel'
-import { KnowledgeSourcesList } from './KnowledgeSourcesList'
 import { ConversationSessions } from './tools-panel/ConversationSessions'
 
 export interface ToolsPanelProps {
@@ -43,7 +42,6 @@ export function ToolsPanel({
   chatProfiles: _chatProfiles = [],
 }: ToolsPanelProps) {
   const isChatView = sectionId === 'chat'
-  const isKnowledgeView = sectionId === 'knowledge'
   const effectiveTenantId = tenantId?.trim() ?? ''
 
   useEffect(() => {
@@ -66,8 +64,7 @@ export function ToolsPanel({
     <aside className={`tools-panel side-panel ${expanded ? 'expanded' : 'collapsed'}`}>
       {expanded && (
         <div className="side-panel-inner">
-          <div className="side-panel-title">{isKnowledgeView ? 'Knowledge sources' : 'Conversation'}</div>
-          {isKnowledgeView && <KnowledgeSourcesList />}
+          <div className="side-panel-title">{isChatView ? 'Conversation' : 'Tools'}</div>
           {sectionId === 'chat' && isChatView && (
             <ConversationSessions tenantId={effectiveTenantId} onNewChat={onNewChat} />
           )}

@@ -10,7 +10,7 @@ import { knowledgeIngestStore, type KnowledgeIngestRun } from '../store/knowledg
 export function KnowledgeIngestRunTracker({ run }: { run: KnowledgeIngestRun }) {
   useEffect(() => {
     if (!run.runId) return
-    if (run.status !== 'processing' && run.status !== 'pending') return
+    if (run.status !== 'in_progress' && run.status !== 'pending') return
 
     const abort = streamRunEvents(
       run.runId,
@@ -18,7 +18,7 @@ export function KnowledgeIngestRunTracker({ run }: { run: KnowledgeIngestRun }) 
         knowledgeIngestStore.getState().patchRunFromEvent(run.id, ev)
       },
       () => {
-        /* keep processing until terminal event or timeout */
+        /* keep in progress until a terminal event or timeout arrives */
       }
     )
     return abort

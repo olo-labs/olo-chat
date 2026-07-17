@@ -42,7 +42,7 @@ export const SECTIONS: SectionConfig[] = [
     label: 'Knowledge',
     subtitle: 'Knowledge sources and status',
     subOptions: [
-      { id: 'sources', label: 'Sources', description: 'List of knowledge sources (in second panel)' },
+      { id: 'sources', label: 'Sources', description: 'List of knowledge source collections' },
       { id: 'create', label: 'Create new', description: 'Create new knowledge source' },
       { id: 'status', label: 'Status', description: 'Indexed, processing' },
     ],

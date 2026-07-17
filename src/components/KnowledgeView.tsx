@@ -4,9 +4,10 @@
  */
 
 /**
- * Main content for Knowledge section. Sub-options: sources (list in second panel), create (create new), status (indexed, processing).
+ * Main content for Knowledge section. Sub-options: sources, create, status.
  */
 import { KnowledgeCreateView } from './KnowledgeCreateView'
+import { KnowledgeSourcesList } from './KnowledgeSourcesList'
 import { KnowledgeStatusView } from './KnowledgeStatusView'
 
 export interface KnowledgeViewProps {
@@ -23,10 +24,10 @@ export function KnowledgeView({ subId }: KnowledgeViewProps) {
   return (
     <div className="knowledge-view knowledge-view-sources">
       <p className="knowledge-view-description">
-        Select a knowledge source from the list in the second panel, or use <strong>Create new</strong>{' '}
-        to index uploaded documents into the vector store via the <strong>documents-index</strong>{' '}
-        workflow.
+        Review every knowledge source collection available to chat. File collections come from
+        uploaded document folders, and additional source types can appear here as they are added.
       </p>
+      <KnowledgeSourcesList />
     </div>
   )
 }

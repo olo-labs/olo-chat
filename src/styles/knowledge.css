@@ -30,6 +30,12 @@
   color: var(--text-muted, #a1a1aa);
 }
 
+.knowledge-field-hint {
+  color: var(--text-muted, #a1a1aa);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
 .knowledge-field-input {
   padding: 0.5rem 0.65rem;
   border-radius: 6px;
@@ -177,22 +183,61 @@
   padding: 0;
 }
 
+.knowledge-sources-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.45rem 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.knowledge-sources-summary-title {
+  font-weight: 600;
+}
+
+.knowledge-sources-summary-meta {
+  color: var(--text-muted, #a1a1aa);
+  font-size: 0.85rem;
+}
+
 .knowledge-sources-item {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.35rem 0.75rem;
-  padding: 0.45rem 0;
+  gap: 0.45rem 0.75rem;
+  padding: 0.55rem 0;
   border-bottom: 1px solid var(--border, #3f3f46);
+}
+
+.knowledge-sources-item-main {
+  display: flex;
+  min-width: 12rem;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.1rem;
 }
 
 .knowledge-sources-item-name {
   font-weight: 500;
 }
 
+.knowledge-sources-item-id {
+  color: var(--text-muted, #a1a1aa);
+  font-size: 0.78rem;
+}
+
 .knowledge-sources-item-meta {
   font-size: 0.85rem;
   color: var(--text-muted, #a1a1aa);
+}
+
+.knowledge-sources-type-pill {
+  border: 1px solid var(--border, #3f3f46);
+  border-radius: 999px;
+  color: var(--text-muted, #a1a1aa);
+  font-size: 0.78rem;
+  padding: 0.12rem 0.5rem;
 }
 
 .knowledge-sources-item-badge {
@@ -201,6 +246,16 @@
   border-radius: 4px;
   background: #422006;
   color: #fbbf24;
+}
+
+.knowledge-sources-item-badge-success {
+  background: #052e16;
+  color: #4ade80;
+}
+
+.knowledge-sources-item-badge-failed {
+  background: #450a0a;
+  color: #f87171;
 }
 
 .knowledge-sources-refresh {
@@ -225,4 +280,30 @@
   gap: 1rem;
   padding: 0.4rem 0;
   border-bottom: 1px solid var(--border, #3f3f46);
+}
+
+.knowledge-source-group {
+  margin-bottom: 1.25rem;
+}
+
+.knowledge-source-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.knowledge-run-type {
+  color: var(--text-muted, #a1a1aa);
+  font-size: 0.85rem;
+}
+
+.knowledge-run-in_progress .knowledge-run-status,
+.knowledge-run-pending .knowledge-run-status {
+  color: #fbbf24;
+}
+
+.knowledge-run-success .knowledge-run-status {
+  color: #4ade80;
 }
