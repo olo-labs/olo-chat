@@ -16,7 +16,6 @@ import {
   type UploadedDocumentDto,
 } from '../api/ragIngestApi'
 import { knowledgeIngestStore, knowledgeStatusLabel } from '../store/knowledgeIngestStore'
-import { KnowledgeIngestRunTracker } from './KnowledgeIngestRunTracker'
 
 function sourceFromId(id: string): KnowledgeSourceDto {
   return {
@@ -334,12 +333,6 @@ export function KnowledgeCreateView() {
           </ul>
         </div>
       )}
-
-      {ingestRuns
-        .filter((r) => r.runId && (r.status === 'in_progress' || r.status === 'pending'))
-        .map((r) => (
-          <KnowledgeIngestRunTracker key={r.id} run={r} />
-        ))}
     </div>
   )
 }

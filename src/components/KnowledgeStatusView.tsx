@@ -3,13 +3,29 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  FILES_KNOWLEDGE_SOURCE_TYPE,
   knowledgeSourceTypeLabel,
   listKnowledgeSources,
   type KnowledgeSourceDto,
 } from '../api/ragIngestApi'
-import { knowledgeIngestStore, knowledgeStatusLabel } from '../store/knowledgeIngestStore'
+import {
+  knowledgeIngestStore,
+  knowledgeStatusLabel,
+  type KnowledgeIngestRun,
+} from '../store/knowledgeIngestStore'
+
+function sourceFromRun(run: KnowledgeIngestRun): KnowledgeSourceDto {
+  return {
+    capabilitySource: run.knowledgeName || run.capabilitySource,
+    displayName: run.knowledgeName || run.capabilitySource,
+    sourceType: run.sourceType || FILES_KNOWLEDGE_SOURCE_TYPE,
+    fileCount: run.fileNames.length,
+    status: run.status === 'success' ? 'success' : run.status === 'failed' ? 'failed' : 'in_progress',
+    description: run.capabilitySource,
+  }
+}
 
 export function KnowledgeStatusView() {
   const runs = knowledgeIngestStore((s) => s.runs)
@@ -25,10 +41,24 @@ export function KnowledgeStatusView() {
 
   useEffect(() => {
     void refresh()
-  }, [refresh, runs.length])
+  }, [refresh, runs])
 
   const activeRuns = runs.filter((r) => r.status === 'in_progress' || r.status === 'pending')
   const completedRuns = runs.filter((r) => r.status === 'success' || r.status === 'failed')
+  const visibleSources = useMemo(() => {
+    const map = new Map<string, KnowledgeSourceDto>()
+    for (const src of sources) {
+      map.set(`${src.sourceType}:${src.capabilitySource}`, src)
+    }
+    for (const run of runs) {
+      if (run.status !== 'success' && run.status !== 'failed') continue
+      const source = sourceFromRun(run)
+      map.set(`${source.sourceType}:${source.capabilitySource}`, source)
+    }
+    return [...map.values()].sort((a, b) =>
+      `${a.sourceType}:${a.displayName}`.localeCompare(`${b.sourceType}:${b.displayName}`)
+    )
+  }, [runs, sources])
 
   return (
     <div className="knowledge-view knowledge-view-status">
@@ -75,18 +105,18 @@ export function KnowledgeStatusView() {
 
       <section className="knowledge-status-section">
         <div className="knowledge-files-header">
-          <h3 className="knowledge-runs-title">Server sources</h3>
+          <h3 className="knowledge-runs-title">Knowledge sources</h3>
           <button type="button" className="knowledge-link-btn" onClick={() => void refresh()}>
             Refresh
           </button>
         </div>
         {loading ? (
           <p className="knowledge-empty">Loading sources...</p>
-        ) : sources.length === 0 ? (
+        ) : visibleSources.length === 0 ? (
           <p className="knowledge-empty">No knowledge source collections available yet.</p>
         ) : (
           <ul className="knowledge-sources-server-list">
-            {sources.map((src) => (
+            {visibleSources.map((src) => (
               <li key={`${src.sourceType}:${src.capabilitySource}`} className="knowledge-source-row">
                 <span className="knowledge-run-source">{src.displayName}</span>
                 <span className="knowledge-run-type">{knowledgeSourceTypeLabel(src.sourceType)}</span>
