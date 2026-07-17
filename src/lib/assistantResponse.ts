@@ -29,6 +29,35 @@ function isMetadataOnlyOutput(o: Record<string, unknown>): boolean {
   return keys.every((k) => metadataKeys.has(k))
 }
 
+function formatConversationSummary(summary: string): string | null {
+  const trimmed = summary.trim()
+  if (!trimmed) return null
+  return trimmed
+    .replace(/\s+assistant:\s*/gi, '\n\nAssistant: ')
+    .replace(/^user:\s*/i, 'User: ')
+    .replace(/\s+user:\s*/gi, '\n\nUser: ')
+    .trim()
+}
+
+function extractJavaMapValue(text: string, key: string): string | null {
+  const marker = `${key}=`
+  const start = text.indexOf(marker)
+  if (start < 0) return null
+  const valueStart = start + marker.length
+  const nextKey = text.slice(valueStart).search(/,\s*[A-Za-z][A-Za-z0-9_]*=/)
+  const value = nextKey >= 0 ? text.slice(valueStart, valueStart + nextKey) : text.slice(valueStart)
+  return value.replace(/}$/, '').trim() || null
+}
+
+function normalizeJavaMapText(text: string): string | null {
+  const trimmed = text.trim()
+  if (!trimmed.startsWith('{') || !trimmed.endsWith('}') || !trimmed.includes('=')) return null
+  const summary = extractJavaMapValue(trimmed, 'summary')
+  if (summary) return formatConversationSummary(summary)
+  const response = extractJavaMapValue(trimmed, 'response') ?? extractJavaMapValue(trimmed, 'message')
+  return response?.trim() || null
+}
+
 /** Extract workflow return / assistant text from node output. */
 export function extractAssistantText(output: unknown): string | null {
   if (output == null) return null
@@ -50,6 +79,8 @@ export function extractAssistantText(output: unknown): string | null {
   const returnValue = o.returnValue
   if (returnValue != null) {
     const asText = String(returnValue).trim()
+    const normalized = normalizeJavaMapText(asText)
+    if (normalized) return normalized
     if (asText && asText !== 'null' && asText !== 'undefined') return asText
   }
 
@@ -133,6 +164,8 @@ export function isWorkflowFinished(events: RunEventDto[]): boolean {
 export function normalizeResponseText(text: string | null | undefined): string | null {
   const trimmed = text?.trim()
   if (!trimmed) return null
+  const normalizedMapText = normalizeJavaMapText(trimmed)
+  if (normalizedMapText) return normalizedMapText
   if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
     try {
       const o = JSON.parse(trimmed) as Record<string, unknown>

@@ -48,6 +48,14 @@ describe('normalizeResponseText', () => {
     expect(normalizeResponseText('{"source":"temporal"}')).toBeNull()
     expect(normalizeResponseText('hello')).toBe('hello')
   })
+
+  it('formats Java map conversation-store summaries', () => {
+    expect(
+      normalizeResponseText(
+        '{storedTurns=2, sessionId=5ad431c5-b7cb-410c-a6ba-740a660a6882, storagePath=/app/shared/olo-core/tools/demo-data/conversations/5ad431c5-b7cb-410c-a6ba-740a660a6882.json, summary=user: who stores json assistant: JSON data is typically stored in files or databases.}',
+      ),
+    ).toBe('User: who stores json\n\nAssistant: JSON data is typically stored in files or databases.')
+  })
 })
 
 describe('isWorkflowFinished', () => {
