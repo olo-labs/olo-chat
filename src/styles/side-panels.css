@@ -107,6 +107,9 @@
 .properties-panel.expanded .side-panel-inner:not(:has(> .events-list)) {
   overflow: auto; /* e.g. tenant config: whole inner scrolls */
 }
+.properties-panel.expanded .side-panel-inner:has(> .file-viewer-panel) {
+  overflow: hidden;
+}
 .properties-panel .side-panel-inner > .events-list {
   flex: 1;
   min-height: 0;
@@ -159,6 +162,112 @@
   letter-spacing: 0.05em;
   color: #a1a1aa;
   border-bottom: 1px solid #27272a;
+}
+
+.file-viewer-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.file-viewer-header {
+  padding: 0.65rem 0.75rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid #27272a;
+}
+
+.file-viewer-heading {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.file-viewer-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #fafafa;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.file-viewer-source {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #a1a1aa;
+  font-size: 0.72rem;
+}
+
+.file-viewer-close {
+  padding: 0.25rem 0.45rem;
+  color: #e4e4e7;
+  background: #27272a;
+  border: 1px solid #3f3f46;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.file-viewer-empty,
+.file-viewer-error {
+  margin: 0.75rem;
+  padding: 0.75rem;
+  color: #a1a1aa;
+  background: #141418;
+  border: 1px solid #27272a;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.file-viewer-error {
+  color: #fecaca;
+  border-color: #7f1d1d;
+}
+
+.file-viewer-text {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0.75rem;
+  overflow: auto;
+  color: #e4e4e7;
+  background: #0f0f12;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.file-viewer-frame {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  border: 0;
+  background: #0f0f12;
+}
+
+.file-viewer-image-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 0.75rem;
+  background: #0f0f12;
+}
+
+.file-viewer-image {
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
 }
 
 /* Pipeline dropdown under Conversation when a queue is selected (Chat) */

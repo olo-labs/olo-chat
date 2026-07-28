@@ -6,6 +6,7 @@
 import { DocumentsUploadModal } from './DocumentsUploadModal'
 import { DocumentUploadRunTracker } from './DocumentUploadRunTracker'
 import { DocumentsDeleteDialog } from './documents/DocumentsDeleteDialog'
+import { DocumentsSourceDeleteDialog } from './documents/DocumentsSourceDeleteDialog'
 import { DocumentsUploadTable } from './documents/DocumentsUploadTable'
 import { DocumentsUploadToolbar } from './documents/DocumentsUploadToolbar'
 import { useDocumentsUpload } from '../hooks/useDocumentsUpload'
@@ -30,7 +31,18 @@ export function DocumentsUploadView() {
         onSourceFilterChange={upload.setSourceFilter}
         onSearchQueryChange={upload.setSearchQuery}
         onUploadClick={() => upload.setModalOpen(true)}
+        onRefreshClick={() => void upload.refreshUploadedSources()}
+        onDeleteSourceClick={() => upload.setSourceDeleteTarget(upload.sourceFilter)}
+        refreshing={upload.refreshingSources}
+        canDeleteSelectedSource={upload.canDeleteSelectedSource}
+        deletingSource={upload.deletingSource}
       />
+
+      {upload.sourceActionError ? (
+        <p className="documents-page-error" role="alert">
+          {upload.sourceActionError}
+        </p>
+      ) : null}
 
       {!hasAnyFiles && (
         <div className="documents-page-empty">
@@ -58,6 +70,7 @@ export function DocumentsUploadView() {
           reprocessId={upload.reprocessId}
           onDelete={upload.setDeleteTarget}
           onReprocess={upload.handleReprocess}
+          onView={upload.handleViewFile}
         />
       )}
 
@@ -89,6 +102,15 @@ export function DocumentsUploadView() {
             upload.removeRow(upload.deleteTarget!.id)
             upload.setDeleteTarget(null)
           }}
+        />
+      )}
+
+      {upload.sourceDeleteTarget && (
+        <DocumentsSourceDeleteDialog
+          source={upload.sourceDeleteTarget}
+          deleting={upload.deletingSource}
+          onCancel={() => upload.setSourceDeleteTarget(null)}
+          onConfirm={() => void upload.handleDeleteSource()}
         />
       )}
     </div>

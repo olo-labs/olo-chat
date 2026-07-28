@@ -32,6 +32,20 @@ export interface DocumentUploadRow {
   createdAt: number
 }
 
+export interface DocumentFileSelection {
+  source: string
+  fileName: string
+}
+
+export interface DocumentUploadServerSource {
+  capabilitySource: string
+  files: Array<{
+    fileName: string
+    capabilitySource?: string
+    lastModified?: number
+  }>
+}
+
 function extractChunks(ev: RunEventDto): number | undefined {
   const o = ev.output as Record<string, unknown> | undefined
   const m = ev.metadata as Record<string, unknown> | undefined
@@ -46,9 +60,13 @@ function extractChunks(ev: RunEventDto): number | undefined {
 export interface DocumentUploadsState {
   rows: DocumentUploadRow[]
   customSources: string[]
+  selectedFile: DocumentFileSelection | null
   addRows: (rows: DocumentUploadRow[]) => void
+  hydrateRowsFromServer: (sources: DocumentUploadServerSource[]) => void
   updateRow: (id: string, patch: Partial<DocumentUploadRow>) => void
   removeRow: (id: string) => void
+  removeRowsBySource: (source: string) => void
+  selectFile: (file: DocumentFileSelection | null) => void
   addCustomSource: (name: string) => void
   patchRowFromEvent: (id: string, ev: RunEventDto) => void
 }
@@ -64,11 +82,52 @@ export const documentUploadsStore = create<DocumentUploadsState>()(
     (set) => ({
       rows: [],
       customSources: [],
+      selectedFile: null,
 
       addRows: (newRows) =>
         set((s) => ({
           rows: trimRows([...newRows, ...s.rows]),
         })),
+
+      hydrateRowsFromServer: (sources) =>
+        set((s) => {
+          const existingByKey = new Map(s.rows.map((row) => [`${row.source}\u0000${row.fileName}`, row]))
+          const serverKeys = new Set<string>()
+          const serverRows: DocumentUploadRow[] = []
+
+          for (const source of sources) {
+            const capabilitySource = source.capabilitySource.trim()
+            if (!capabilitySource) continue
+            for (const file of source.files) {
+              const fileName = file.fileName.trim()
+              if (!fileName) continue
+              const key = `${capabilitySource}\u0000${fileName}`
+              serverKeys.add(key)
+              const existing = existingByKey.get(key)
+              serverRows.push({
+                id: existing?.id ?? crypto.randomUUID(),
+                fileName,
+                source: capabilitySource,
+                status:
+                  existing?.status === 'uploading' || existing?.status === 'processing'
+                    ? existing.status
+                    : existing?.status === 'ready'
+                      ? 'ready'
+                      : 'uploaded',
+                chunks: existing?.chunks,
+                runId: existing?.runId,
+                errorMessage: existing?.errorMessage,
+                createdAt: existing?.createdAt ?? file.lastModified ?? Date.now(),
+              })
+            }
+          }
+
+          const localActiveRows = s.rows.filter((row) => {
+            const key = `${row.source}\u0000${row.fileName}`
+            return !serverKeys.has(key) && ['uploading', 'processing', 'failed'].includes(row.status)
+          })
+          return { rows: trimRows([...serverRows, ...localActiveRows]) }
+        }),
 
       updateRow: (id, patch) =>
         set((s) => ({
@@ -79,6 +138,15 @@ export const documentUploadsStore = create<DocumentUploadsState>()(
         set((s) => ({
           rows: s.rows.filter((r) => r.id !== id),
         })),
+
+      removeRowsBySource: (source) =>
+        set((s) => ({
+          rows: s.rows.filter((r) => r.source !== source),
+          customSources: s.customSources.filter((s) => s !== source),
+          selectedFile: s.selectedFile?.source === source ? null : s.selectedFile,
+        })),
+
+      selectFile: (file) => set({ selectedFile: file }),
 
       addCustomSource: (name) => {
         const n = name.trim()

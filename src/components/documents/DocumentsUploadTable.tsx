@@ -11,6 +11,7 @@ export interface DocumentsUploadTableProps {
   reprocessId: string | null
   onDelete: (row: DocumentUploadRow) => void
   onReprocess: (row: DocumentUploadRow) => void
+  onView: (row: DocumentUploadRow) => void
 }
 
 export function DocumentsUploadTable({
@@ -18,6 +19,7 @@ export function DocumentsUploadTable({
   reprocessId,
   onDelete,
   onReprocess,
+  onView,
 }: DocumentsUploadTableProps) {
   return (
     <div className="documents-page-table-wrap">
@@ -52,7 +54,7 @@ export function DocumentsUploadTable({
                     <span aria-hidden>{st.icon}</span> {st.label}
                   </span>
                 </td>
-                <td>{row.chunks != null ? row.chunks : '—'}</td>
+                <td>{row.chunks != null ? row.chunks : '-'}</td>
                 <td>
                   <div className="documents-page-actions">
                     <button
@@ -62,7 +64,7 @@ export function DocumentsUploadTable({
                       aria-label={`Delete ${row.fileName}`}
                       onClick={() => onDelete(row)}
                     >
-                      ❌
+                      X
                     </button>
                     <button
                       type="button"
@@ -72,10 +74,16 @@ export function DocumentsUploadTable({
                       disabled={reprocessId === row.id || row.status === 'uploading'}
                       onClick={() => onReprocess(row)}
                     >
-                      🔁
+                      R
                     </button>
-                    <button type="button" className="documents-page-action-btn" disabled title="View (coming soon)">
-                      👁
+                    <button
+                      type="button"
+                      className="documents-page-action-btn"
+                      title="View"
+                      aria-label={`View ${row.fileName}`}
+                      onClick={() => onView(row)}
+                    >
+                      View
                     </button>
                   </div>
                 </td>

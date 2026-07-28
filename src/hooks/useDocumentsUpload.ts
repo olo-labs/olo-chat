@@ -8,15 +8,21 @@ import {
   uploadCapabilitySourceFiles,
   reprocessCapabilitySourceDocument,
   getConfiguredCapabilitySources,
+  listResourceUploadSources,
+  deleteCapabilitySource,
 } from '../api/documentsUploadApi'
 import { documentUploadsStore, type DocumentUploadRow } from '../store/documentUploadsStore'
+import { useUIStore } from '../store/ui'
 
 export function useDocumentsUpload() {
   const rows = documentUploadsStore((s) => s.rows)
   const customSources = documentUploadsStore((s) => s.customSources)
   const addRows = documentUploadsStore((s) => s.addRows)
+  const hydrateRowsFromServer = documentUploadsStore((s) => s.hydrateRowsFromServer)
   const updateRow = documentUploadsStore((s) => s.updateRow)
   const removeRow = documentUploadsStore((s) => s.removeRow)
+  const removeRowsBySource = documentUploadsStore((s) => s.removeRowsBySource)
+  const selectFile = documentUploadsStore((s) => s.selectFile)
   const addCustomSource = documentUploadsStore((s) => s.addCustomSource)
 
   const envOptions = useMemo(() => getConfiguredCapabilitySources(), [])
@@ -25,7 +31,11 @@ export function useDocumentsUpload() {
   const [searchQuery, setSearchQuery] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<DocumentUploadRow | null>(null)
+  const [sourceDeleteTarget, setSourceDeleteTarget] = useState<string | null>(null)
   const [reprocessId, setReprocessId] = useState<string | null>(null)
+  const [refreshingSources, setRefreshingSources] = useState(false)
+  const [deletingSource, setDeletingSource] = useState(false)
+  const [sourceActionError, setSourceActionError] = useState<string | null>(null)
 
   const mergedSources = useMemo(() => {
     const fromRows = [...new Set(rows.map((r) => r.source))]
@@ -41,6 +51,20 @@ export function useDocumentsUpload() {
   }, [rows, sourceFilter, searchQuery])
 
   const defaultModalSource = sourceFilter !== 'all' ? sourceFilter : mergedSources[0] || ''
+  const canDeleteSelectedSource = sourceFilter !== 'all' && mergedSources.includes(sourceFilter)
+
+  const refreshUploadedSources = useCallback(async () => {
+    setRefreshingSources(true)
+    setSourceActionError(null)
+    try {
+      const sources = await listResourceUploadSources()
+      hydrateRowsFromServer(sources)
+    } catch (err) {
+      setSourceActionError(err instanceof Error ? err.message : 'Failed to refresh source files.')
+    } finally {
+      setRefreshingSources(false)
+    }
+  }, [hydrateRowsFromServer])
 
   useEffect(() => {
     for (const row of rows) {
@@ -52,6 +76,10 @@ export function useDocumentsUpload() {
       }
     }
   }, [rows, updateRow])
+
+  useEffect(() => {
+    void refreshUploadedSources()
+  }, [refreshUploadedSources])
 
   const onStartUpload = useCallback(
     async (files: File[], source: string) => {
@@ -88,6 +116,7 @@ export function useDocumentsUpload() {
             runId,
             errorMessage: undefined,
           })
+          void refreshUploadedSources()
         } catch (err) {
           updateRow(row.id, {
             status: 'failed',
@@ -96,7 +125,7 @@ export function useDocumentsUpload() {
         }
       }
     },
-    [addRows, updateRow]
+    [addRows, refreshUploadedSources, updateRow]
   )
 
   const handleReprocess = useCallback(
@@ -127,6 +156,36 @@ export function useDocumentsUpload() {
     [updateRow]
   )
 
+  const handleViewFile = useCallback(
+    (row: DocumentUploadRow) => {
+      selectFile({ source: row.source, fileName: row.fileName })
+      useUIStore.getState().setPropertiesPanelExpanded(true)
+    },
+    [selectFile]
+  )
+
+  const handleDeleteSource = useCallback(async () => {
+    const source = sourceDeleteTarget?.trim()
+    if (!source) return
+    setDeletingSource(true)
+    setSourceActionError(null)
+    try {
+      const result = await deleteCapabilitySource(source)
+      if (!result.success) {
+        setSourceActionError(result.message ?? 'Failed to delete source.')
+        return
+      }
+      removeRowsBySource(source)
+      setSourceDeleteTarget(null)
+      if (sourceFilter === source) {
+        setSourceFilter('all')
+      }
+      void refreshUploadedSources()
+    } finally {
+      setDeletingSource(false)
+    }
+  }, [refreshUploadedSources, removeRowsBySource, sourceDeleteTarget, sourceFilter])
+
   return {
     rows,
     customSources,
@@ -139,13 +198,22 @@ export function useDocumentsUpload() {
     setModalOpen,
     deleteTarget,
     setDeleteTarget,
+    sourceDeleteTarget,
+    setSourceDeleteTarget,
     reprocessId,
+    refreshingSources,
+    deletingSource,
+    sourceActionError,
     mergedSources,
     filteredRows,
     defaultModalSource,
+    canDeleteSelectedSource,
     addCustomSource,
     removeRow,
     onStartUpload,
+    refreshUploadedSources,
     handleReprocess,
+    handleViewFile,
+    handleDeleteSource,
   }
 }

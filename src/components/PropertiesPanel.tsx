@@ -6,18 +6,19 @@
 export interface PropertiesPanelProps {
   expanded: boolean
   onToggle: () => void
+  title?: string
   children?: React.ReactNode
 }
 
-export function PropertiesPanel({ expanded, onToggle, children }: PropertiesPanelProps) {
+export function PropertiesPanel({ expanded, onToggle, title = 'Events', children }: PropertiesPanelProps) {
   return (
     <aside className={`properties-panel side-panel ${expanded ? 'expanded' : 'collapsed'}`}>
       {expanded && (
         <div className="side-panel-inner">
           {children != null ? children : (
             <>
-              <div className="side-panel-title">Events</div>
-              <div className="side-panel-placeholder">Events content</div>
+              <div className="side-panel-title">{title}</div>
+              <div className="side-panel-placeholder">{title} content</div>
             </>
           )}
         </div>
@@ -27,12 +28,12 @@ export function PropertiesPanel({ expanded, onToggle, children }: PropertiesPane
         className="side-panel-toggle"
         onClick={onToggle}
         title={expanded ? 'Collapse' : 'Expand'}
-        aria-label={expanded ? 'Collapse Events' : 'Expand Events'}
+        aria-label={expanded ? `Collapse ${title}` : `Expand ${title}`}
       >
         {expanded ? (
           '>'
         ) : (
-          <span className="side-panel-collapsed-label">Events</span>
+          <span className="side-panel-collapsed-label">{title}</span>
         )}
       </button>
     </aside>

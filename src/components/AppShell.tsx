@@ -13,6 +13,7 @@ import { PropertiesPanel } from './PropertiesPanel'
 import { PanelResizeHandle } from './PanelResizeHandle'
 import { TenantConfigForm } from './TenantConfigForm'
 import { EventsList } from './EventsList'
+import { FileViewerPanel } from './FileViewerPanel'
 import type { Tenant } from '../types/tenant'
 import { useUIStore } from '../store/ui'
 import { runEventsStore } from '../store/runEvents'
@@ -143,9 +144,15 @@ export function AppShell({
             useUIStore.getState().setPanelWidthProperties(useUIStore.getState().panelWidthProperties + delta)
           }
         />
-        <PropertiesPanel expanded={propertiesPanelExpanded} onToggle={nav.handleTogglePropertiesPanel}>
+        <PropertiesPanel
+          expanded={propertiesPanelExpanded}
+          onToggle={nav.handleTogglePropertiesPanel}
+          title={sectionId === 'documents' ? 'File Viewer' : 'Events'}
+        >
           {sectionId === 'chat' ? (
             <EventsList />
+          ) : sectionId === 'documents' ? (
+            <FileViewerPanel />
           ) : sectionId === 'knowledge' ? undefined : isTenantConfig ? (
             <TenantConfigForm
               tenant={configSelectedTenant}

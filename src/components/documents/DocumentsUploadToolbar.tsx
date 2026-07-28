@@ -10,6 +10,11 @@ export interface DocumentsUploadToolbarProps {
   onSourceFilterChange: (v: string) => void
   onSearchQueryChange: (v: string) => void
   onUploadClick: () => void
+  onRefreshClick: () => void
+  onDeleteSourceClick: () => void
+  refreshing: boolean
+  canDeleteSelectedSource: boolean
+  deletingSource: boolean
 }
 
 export function DocumentsUploadToolbar({
@@ -19,11 +24,25 @@ export function DocumentsUploadToolbar({
   onSourceFilterChange,
   onSearchQueryChange,
   onUploadClick,
+  onRefreshClick,
+  onDeleteSourceClick,
+  refreshing,
+  canDeleteSelectedSource,
+  deletingSource,
 }: DocumentsUploadToolbarProps) {
   return (
     <div className="documents-page-toolbar">
       <button type="button" className="documents-page-btn-primary" onClick={onUploadClick}>
         + Upload Files
+      </button>
+
+      <button
+        type="button"
+        className="documents-page-btn-secondary"
+        onClick={onRefreshClick}
+        disabled={refreshing}
+      >
+        {refreshing ? 'Refreshing...' : 'Refresh'}
       </button>
 
       <label className="documents-page-toolbar-field">
@@ -42,6 +61,16 @@ export function DocumentsUploadToolbar({
           ))}
         </select>
       </label>
+
+      <button
+        type="button"
+        className="documents-page-btn-danger-inline"
+        onClick={onDeleteSourceClick}
+        disabled={!canDeleteSelectedSource || deletingSource}
+        title={canDeleteSelectedSource ? `Delete source ${sourceFilter}` : 'Select a source to delete'}
+      >
+        {deletingSource ? 'Deleting...' : 'Delete Source'}
+      </button>
 
       <div className="documents-page-search-wrap">
         <span className="documents-page-search-icon" aria-hidden>
