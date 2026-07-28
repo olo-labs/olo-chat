@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   uploadCapabilitySourceFiles,
   reprocessCapabilitySourceDocument,
@@ -42,17 +42,16 @@ export function useDocumentsUpload() {
 
   const defaultModalSource = sourceFilter !== 'all' ? sourceFilter : mergedSources[0] || ''
 
-  const scheduleFallbackReady = useCallback(
-    (id: string) => {
-      window.setTimeout(() => {
-        const r = documentUploadsStore.getState().rows.find((x) => x.id === id)
-        if (r && r.status === 'processing' && !r.runId) {
-          updateRow(id, { status: 'ready' })
-        }
-      }, 7000)
-    },
-    [updateRow]
-  )
+  useEffect(() => {
+    for (const row of rows) {
+      if (row.status === 'processing' && !row.runId) {
+        updateRow(row.id, {
+          status: 'uploaded',
+          errorMessage: undefined,
+        })
+      }
+    }
+  }, [rows, updateRow])
 
   const onStartUpload = useCallback(
     async (files: File[], source: string) => {
@@ -84,11 +83,11 @@ export function useDocumentsUpload() {
           const per = result.files?.find((x) => x.fileName === file.name)
           const runId = per?.runId ?? result.runId ?? result.runIds?.[i] ?? result.runIds?.[0]
 
-          updateRow(row.id, { status: 'processing', runId })
-
-          if (!runId) {
-            scheduleFallbackReady(row.id)
-          }
+          updateRow(row.id, {
+            status: runId ? 'processing' : 'uploaded',
+            runId,
+            errorMessage: undefined,
+          })
         } catch (err) {
           updateRow(row.id, {
             status: 'failed',
@@ -97,7 +96,7 @@ export function useDocumentsUpload() {
         }
       }
     },
-    [addRows, updateRow, scheduleFallbackReady]
+    [addRows, updateRow]
   )
 
   const handleReprocess = useCallback(
@@ -109,16 +108,23 @@ export function useDocumentsUpload() {
         fileName: row.fileName,
       })
       if (res.success && res.runId) {
-        updateRow(row.id, { runId: res.runId })
+        updateRow(row.id, { status: 'processing', runId: res.runId })
       } else if (res.success) {
-        scheduleFallbackReady(row.id)
+        updateRow(row.id, {
+          status: 'failed',
+          runId: undefined,
+          errorMessage: 'Reprocess did not return a run id.',
+        })
       } else {
-        updateRow(row.id, { status: 'processing', runId: undefined })
-        scheduleFallbackReady(row.id)
+        updateRow(row.id, {
+          status: 'failed',
+          runId: undefined,
+          errorMessage: 'Reprocess failed.',
+        })
       }
       setReprocessId(null)
     },
-    [updateRow, scheduleFallbackReady]
+    [updateRow]
   )
 
   return {

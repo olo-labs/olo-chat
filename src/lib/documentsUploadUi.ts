@@ -17,6 +17,8 @@ export function statusDisplay(status: DocumentUploadRow['status']): { label: str
   switch (status) {
     case 'uploading':
       return { label: 'Uploading', icon: '⏳' }
+    case 'uploaded':
+      return { label: 'Uploaded', icon: '📁' }
     case 'processing':
       return { label: 'Processing', icon: '⚙️' }
     case 'ready':

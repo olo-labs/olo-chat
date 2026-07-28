@@ -18,7 +18,7 @@ import type { RunEventDto } from '../api/chatApi'
 const STORAGE_KEY = 'olo:document-uploads'
 const MAX_ROWS = 500
 
-export type DocumentUploadRowStatus = 'uploading' | 'processing' | 'ready' | 'failed'
+export type DocumentUploadRowStatus = 'uploading' | 'uploaded' | 'processing' | 'ready' | 'failed'
 
 export interface DocumentUploadRow {
   id: string
