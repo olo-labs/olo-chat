@@ -26,6 +26,8 @@ const INGEST_PIPELINE =
   (import.meta.env.VITE_RESOURCE_UPLOAD_PIPELINE as string)?.trim() ||
   (import.meta.env.VITE_RAG_PIPELINE as string)?.trim() ||
   'documents-index'
+const DELETE_QUEUE = (import.meta.env.VITE_RAG_DELETE_QUEUE as string)?.trim() || ''
+const DELETE_PIPELINE = (import.meta.env.VITE_RAG_DELETE_PIPELINE as string)?.trim() || 'documents-delete'
 
 export const FILES_KNOWLEDGE_SOURCE_TYPE = 'files'
 
@@ -73,6 +75,26 @@ export interface RagIngestResult {
   pipeline?: string
   taskQueue?: string
   files?: string[]
+}
+
+export interface RagDeleteRequest {
+  tenantId?: string
+  sourceType?: string
+  knowledgeName: string
+  sourceCollection?: string
+  taskQueue?: string
+  pipelineId?: string
+}
+
+export interface RagDeleteResult {
+  success: boolean
+  message?: string
+  runId?: string
+  knowledgeName?: string
+  sourceType?: string
+  sourceCollection?: string
+  pipeline?: string
+  taskQueue?: string
 }
 
 export interface KnowledgeSourceTypeOption {
@@ -214,6 +236,54 @@ export async function startRagIngest(req: RagIngestRequest): Promise<RagIngestRe
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Network error'
     return { success: false, message: msg }
+  }
+}
+
+export async function startRagDelete(req: RagDeleteRequest): Promise<RagDeleteResult> {
+  const knowledgeName = req.knowledgeName?.trim() ?? ''
+  if (!knowledgeName) {
+    return { success: false, message: 'Knowledge source name is required.' }
+  }
+  const body: Record<string, unknown> = {
+    tenantId: req.tenantId?.trim() || 'default',
+    sourceType: req.sourceType?.trim() || FILES_KNOWLEDGE_SOURCE_TYPE,
+    knowledgeName,
+  }
+  const sourceCollection = req.sourceCollection?.trim()
+  if (sourceCollection) body.sourceCollection = sourceCollection
+  const queue = req.taskQueue ?? DELETE_QUEUE
+  const pipeline = req.pipelineId ?? DELETE_PIPELINE
+  if (queue) body.taskQueue = queue
+  if (pipeline) body.pipelineId = pipeline
+
+  try {
+    const res = await fetch(`${API}/rag/delete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getApiAuthHeaders() },
+      body: JSON.stringify(body),
+    })
+    const text = await res.text()
+    const data = parseJson<RagDeleteResult & { message?: string }>(text)
+    if (!res.ok || data?.success === false) {
+      return {
+        success: false,
+        message: data?.message ?? `RAG delete failed (${res.status})`,
+      }
+    }
+    return {
+      success: true,
+      runId: typeof data?.runId === 'string' ? data.runId : undefined,
+      knowledgeName: data?.knowledgeName ?? knowledgeName,
+      sourceType: data?.sourceType ?? String(body.sourceType),
+      sourceCollection: data?.sourceCollection ?? sourceCollection,
+      pipeline: data?.pipeline ?? pipeline,
+      taskQueue: data?.taskQueue ?? queue,
+    }
+  } catch (err) {
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : 'Network error',
+    }
   }
 }
 

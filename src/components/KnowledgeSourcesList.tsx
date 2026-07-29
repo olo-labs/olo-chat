@@ -7,7 +7,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   getKnowledgeSourceTypeOptions,
   knowledgeSourceTypeLabel,
-  listKnowledgeSourceCollections,
+  listKnowledgeSources,
+  startRagDelete,
   type KnowledgeSourceDto,
 } from '../api/ragIngestApi'
 import { knowledgeIngestStore } from '../store/knowledgeIngestStore'
@@ -21,11 +22,13 @@ function sourceStatusLabel(status: KnowledgeSourceDto['status']): string | null 
 export function KnowledgeSourcesList() {
   const [sources, setSources] = useState<KnowledgeSourceDto[]>([])
   const [loading, setLoading] = useState(true)
+  const [deletingName, setDeletingName] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const runs = knowledgeIngestStore((s) => s.runs)
 
   const refresh = useCallback(async () => {
     setLoading(true)
-    const list = await listKnowledgeSourceCollections()
+    const list = await listKnowledgeSources()
     setSources(list)
     setLoading(false)
   }, [])
@@ -33,6 +36,37 @@ export function KnowledgeSourcesList() {
   useEffect(() => {
     void refresh()
   }, [refresh, runs.length])
+
+  useEffect(() => {
+    if (!sources.some((source) => source.status === 'in_progress')) return
+    const timer = window.setInterval(() => {
+      void refresh()
+    }, 5000)
+    return () => window.clearInterval(timer)
+  }, [refresh, sources])
+
+  const handleDelete = useCallback(
+    async (source: KnowledgeSourceDto) => {
+      const name = source.displayName || source.capabilitySource
+      if (!name.trim()) return
+      const ok = window.confirm(`Delete knowledge source "${name}"? This starts the configured delete workflow.`)
+      if (!ok) return
+      setError(null)
+      setDeletingName(name)
+      const result = await startRagDelete({
+        sourceType: source.sourceType,
+        knowledgeName: name,
+        sourceCollection: source.sourceCollection,
+      })
+      setDeletingName(null)
+      if (!result.success) {
+        setError(result.message ?? 'Failed to start knowledge delete workflow.')
+        return
+      }
+      void refresh()
+    },
+    [refresh]
+  )
 
   const groupedSources = useMemo(() => {
     const map = new Map<string, KnowledgeSourceDto[]>()
@@ -58,7 +92,7 @@ export function KnowledgeSourcesList() {
     return (
       <div className="knowledge-sources-list">
         <div className="knowledge-sources-list-empty">
-          No knowledge source collections yet. Upload files under <strong>Documents</strong>, then use{' '}
+          No created knowledge sources yet. Upload files under <strong>Documents</strong>, then use{' '}
           <strong>Create new</strong> to index them.
         </div>
       </div>
@@ -70,21 +104,22 @@ export function KnowledgeSourcesList() {
       <div className="knowledge-sources-summary">
         <span className="knowledge-sources-summary-title">Knowledge source collections</span>
         <span className="knowledge-sources-summary-meta">
-          {sources.length} collection{sources.length === 1 ? '' : 's'} across {groupedSources.length}{' '}
+          {sources.length} knowledge source{sources.length === 1 ? '' : 's'} across {groupedSources.length}{' '}
           type{groupedSources.length === 1 ? '' : 's'}
         </span>
       </div>
+      {error ? <p className="knowledge-error">{error}</p> : null}
 
       {groupedSources.map(({ type, sources: items }) => (
         <section key={type.id} className="knowledge-source-group">
           <div className="knowledge-source-group-header">
             <h3 className="knowledge-runs-title">{type.label}</h3>
             <span className="knowledge-sources-item-meta">
-              {items.length} collection{items.length === 1 ? '' : 's'}
+              {items.length} source{items.length === 1 ? '' : 's'}
             </span>
           </div>
           {items.length === 0 ? (
-            <p className="knowledge-empty">No {type.label.toLowerCase()} collections available.</p>
+            <p className="knowledge-empty">No {type.label.toLowerCase()} knowledge sources available.</p>
           ) : (
             <ul className="knowledge-sources-items">
               {items.map((src) => {
@@ -113,6 +148,14 @@ export function KnowledgeSourcesList() {
                         {statusLabel}
                       </span>
                     ) : null}
+                    <button
+                      type="button"
+                      className="knowledge-sources-delete"
+                      disabled={deletingName === src.displayName || src.status === 'in_progress'}
+                      onClick={() => void handleDelete(src)}
+                    >
+                      {deletingName === src.displayName ? 'Deleting...' : 'Delete'}
+                    </button>
                   </li>
                 )
               })}
